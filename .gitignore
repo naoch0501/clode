@@ -1,0 +1,14 @@
+# 本体・仮想環境（scripts/02_install_sbv2.sh が作成）
+Style-Bert-VITS2/
+venv/
+
+# 音声データ・生成物（個人の声なのでコミットしない）
+inputs/
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+*.opus
+
+__pycache__/
