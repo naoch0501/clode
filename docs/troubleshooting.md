@@ -8,6 +8,21 @@ ROCm 7.2 以降で `amdgpu-install --usecase=wsl` が廃止されたため。最
 faster-whisper は CUDA 専用で、Ubuntu 24.04 ではビルドもできない。最新の `scripts/02_install_sbv2.sh` は
 これを除外して入れる。文字起こしは HF Whisper（`--use_hf_whisper`）を使う。
 
+## `module 'torchaudio' has no attribute 'list_audio_backends'`（音声の分割で失敗）
+torchaudio 2.9 で削除された機能を silero-vad が使っているため。torch / torchaudio を 2.8.0 に入れ替える:
+```bash
+source scripts/env.sh
+uv pip install --reinstall-package torch --reinstall-package torchaudio --reinstall-package triton \
+  --no-index --find-links https://repo.radeon.com/rocm/manylinux/rocm-rel-7.2.1/ \
+  "torch==2.8.0" "torchaudio==2.8.0"
+```
+
+## `No module named 'pkg_resources'`（文字起こしで失敗）
+setuptools 81 以降で pkg_resources が削除されたため。`uv pip install "setuptools<81"`。
+
+## `Input/output error` / `Read-only file system`
+WSL の仮想ディスクの書き込みエラー。C ドライブの空きを 20GB 以上確保し、PowerShell で `wsl --shutdown` して開き直す。
+
 ## GPU が認識されない（`rocminfo` に出ない / `check_gpu.py` が NG）
 1. Windows 側の Adrenalin ドライバを最新にし、PowerShell で `wsl --update` → `wsl --shutdown`。
 2. 環境変数を確認する: `echo $HSA_ENABLE_DXG_DETECTION` → `1` であること（`source scripts/env.sh` で設定される）。

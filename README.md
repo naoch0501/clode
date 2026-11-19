@@ -104,4 +104,5 @@ Style-Bert-VITS2 は公式には NVIDIA (CUDA) 向けです。このリポジト
 - PyTorch は AMD 公式 (repo.radeon.com) の ROCm 版を先に入れ、Style-Bert-VITS2 の `requirements.txt` からは torch を除外して入れる
 - WSL 用に torch 同梱の `libhsa-runtime64.so` を削除し、`HSA_ENABLE_DXG_DETECTION=1` を設定
 - 新しい PyTorch で起きる `torch.load` の `weights_only` エラーを `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` で回避
+- torch / torchaudio は 2.8.0 に固定（2.9 では音声分割に使う silero-vad が動かない）
 - 文字起こしは CUDA 専用の faster-whisper ではなく、Hugging Face 版 Whisper (`--use_hf_whisper`) を使う

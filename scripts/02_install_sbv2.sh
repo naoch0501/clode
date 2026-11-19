@@ -8,6 +8,7 @@
 #   TORCH_SOURCE=radeon    radeon: repo.radeon.com の AMD 公式 wheel / pytorch: download.pytorch.org
 #   PYTORCH_ROCM_INDEX=https://download.pytorch.org/whl/rocm6.4   TORCH_SOURCE=pytorch 時の index
 #   SBV2_REF=master        Style-Bert-VITS2 のブランチ/タグ
+#   TORCH_VERSION=2.8.0    PyTorch / torchaudio のバージョン（2.9 以降は音声分割が動かない）
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,6 +20,7 @@ PY_VER="${PY_VER:-3.10}"
 TORCH_SOURCE="${TORCH_SOURCE:-radeon}"
 PYTORCH_ROCM_INDEX="${PYTORCH_ROCM_INDEX:-https://download.pytorch.org/whl/rocm6.4}"
 SBV2_REF="${SBV2_REF:-master}"
+TORCH_VERSION="${TORCH_VERSION:-2.8.0}"
 
 # --- uv ----------------------------------------------------------------------
 if ! command -v uv >/dev/null 2>&1; then
@@ -37,38 +39,34 @@ source "${VENV_DIR}/bin/activate"
 PY_TAG="cp$(python -c 'import sys; print(f"{sys.version_info[0]}{sys.version_info[1]}")')"
 
 # --- PyTorch (ROCm) ------------------------------------------------------------
+# 2.8.0 に固定: torchaudio 2.9 で list_audio_backends などが削除され、
+# 音声分割 (slice.py) が使う silero-vad が動かなくなるため。
 install_torch_radeon() {
   local base="https://repo.radeon.com/rocm/manylinux/rocm-rel-${ROCM_VERSION}"
-  local listing
-  listing="$(curl -fsSL "${base}/" || true)"
-  local wheels=()
-  local pkg name
-  for pkg in torch torchaudio pytorch_triton_rocm triton; do
-    name="$(grep -oE "${pkg}-[0-9][^\"<>]*-${PY_TAG}-${PY_TAG}-[^\"<>]*\.whl" <<<"${listing}" \
-      | sort -uV | tail -n1 || true)"
-    [[ -n "${name}" ]] && wheels+=("${base}/${name}")
-  done
-  # torch と torchaudio の両方が揃っていなければ失敗扱い
-  if ! printf '%s\n' "${wheels[@]}" | grep -q '/torch-' \
-     || ! printf '%s\n' "${wheels[@]}" | grep -q '/torchaudio-'; then
+  if ! curl -fsSL "${base}/" | grep -qE "torch-${TORCH_VERSION//./\\.}%2B[^\"<>]*-${PY_TAG}-${PY_TAG}-"; then
     return 1
   fi
-  echo "==> AMD 公式 wheel をインストール:"
-  printf '    %s\n' "${wheels[@]}"
-  uv pip install "${wheels[@]}"
+  echo "==> AMD 公式 wheel (torch/torchaudio ${TORCH_VERSION}, ${PY_TAG}) をインストール"
+  # torch の依存は PyPI から先に入れ、torch 本体は --no-index で AMD のものだけを使う（CUDA 版の混入防止）
+  uv pip install filelock fsspec jinja2 networkx sympy typing-extensions "numpy<2"
+  uv pip install --no-index --find-links "${base}/" \
+    --reinstall-package torch --reinstall-package torchaudio \
+    "torch==${TORCH_VERSION}" "torchaudio==${TORCH_VERSION}"
 }
 
 install_torch_pytorch() {
-  echo "==> download.pytorch.org (${PYTORCH_ROCM_INDEX}) から torch/torchaudio をインストール"
-  uv pip install torch torchaudio --index-url "${PYTORCH_ROCM_INDEX}"
+  echo "==> download.pytorch.org (${PYTORCH_ROCM_INDEX}) から torch/torchaudio ${TORCH_VERSION} をインストール"
+  uv pip install "torch==${TORCH_VERSION}" "torchaudio==${TORCH_VERSION}" --index-url "${PYTORCH_ROCM_INDEX}"
 }
 
-if python -c 'import torch, sys; sys.exit(0 if torch.version.hip else 1)' 2>/dev/null; then
-  echo "==> ROCm 版 PyTorch は導入済み: $(python -c 'import torch; print(torch.__version__)')"
+CURRENT_TORCH="$(python -c 'import torch; print(torch.__version__ if torch.version.hip else "")' 2>/dev/null || true)"
+if [[ "${CURRENT_TORCH}" == "${TORCH_VERSION}+"* ]]; then
+  echo "==> ROCm 版 PyTorch は導入済み: ${CURRENT_TORCH}"
 else
+  [[ -n "${CURRENT_TORCH}" ]] && echo "==> PyTorch ${CURRENT_TORCH} を ${TORCH_VERSION} に入れ替えます"
   if [[ "${TORCH_SOURCE}" == "radeon" ]]; then
     if ! install_torch_radeon; then
-      echo "    repo.radeon.com に ${PY_TAG} 用 wheel が見つからないため pytorch.org にフォールバック"
+      echo "    repo.radeon.com に torch ${TORCH_VERSION} (${PY_TAG}) が見つからないため pytorch.org にフォールバック"
       install_torch_pytorch
     fi
   else
@@ -105,7 +103,8 @@ grep -viE '^[[:space:]]*(torch|torchaudio|torchvision|faster-whisper|transformer
   "${SBV2_DIR}/requirements.txt" > "${REQ_FILTERED}"
 uv pip install -r "${REQ_FILTERED}"
 # HF Whisper で文字起こしするため。Style-Bert-VITS2 は transformers 4.x 前提
-uv pip install "transformers<5" "accelerate"
+# setuptools 81 以降は pkg_resources が無く、librosa 0.9 の import が失敗する
+uv pip install "transformers<5" "accelerate" "setuptools<81"
 
 # 依存解決で CUDA 版 torch に置き換わっていないか確認
 if ! python -c 'import torch, sys; sys.exit(0 if torch.version.hip else 1)'; then
