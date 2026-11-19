@@ -1,15 +1,15 @@
 // ここを書き換えるだけでサイト全体の名前・地域・URL が変わります。
 export const SITE = {
-  // サイト名（例: "Okayama Local Guide"）
-  name: 'REGION Local Guide',
-  // 対象地域（例: "Okayama"）
-  region: 'REGION',
+  // サイト名（仮。ドメインを取るときに決め直してOK）
+  name: 'Osaka & Kyoto Local Guide',
+  // 対象地域
+  region: 'Osaka & Kyoto',
   tagline: 'Honest, first-hand travel tips from someone who actually lives here.',
   // 公開 URL（独自ドメインを取ったら書き換える。sitemap と canonical に使われる）
   url: 'https://example.com',
   author: {
     name: 'Your Name',
-    bio: 'A local resident who has explored REGION for years. Every place on this site is one I have visited myself.',
+    bio: 'A local resident who has explored Osaka and Kyoto for years. Every place on this site is one I have visited myself.',
   },
   lang: 'en',
 };
