@@ -104,7 +104,7 @@ grep -viE '^[[:space:]]*(torch|torchaudio|torchvision|faster-whisper|transformer
 uv pip install -r "${REQ_FILTERED}"
 # HF Whisper で文字起こしするため。Style-Bert-VITS2 は transformers 4.x 前提
 # setuptools 81 以降は pkg_resources が無く、librosa 0.9 の import が失敗する
-uv pip install "transformers<5" "accelerate" "setuptools<81"
+uv pip install "transformers<5" "accelerate" "setuptools<81" soxr
 
 # 依存解決で CUDA 版 torch に置き換わっていないか確認
 if ! python -c 'import torch, sys; sys.exit(0 if torch.version.hip else 1)'; then

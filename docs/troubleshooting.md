@@ -20,6 +20,9 @@ uv pip install --reinstall-package torch --reinstall-package torchaudio --reinst
 ## `No module named 'pkg_resources'`（文字起こしで失敗）
 setuptools 81 以降で pkg_resources が削除されたため。`uv pip install "setuptools<81"`。
 
+## `No module named 'soxr'`（文字起こしで失敗）
+transformers の音声処理に必要。`uv pip install soxr`。
+
 ## `Input/output error` / `Read-only file system`
 WSL の仮想ディスクの書き込みエラー。C ドライブの空きを 20GB 以上確保し、PowerShell で `wsl --shutdown` して開き直す。
 
