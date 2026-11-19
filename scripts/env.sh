@@ -18,9 +18,6 @@ export HSA_ENABLE_DXG_DETECTION="${HSA_ENABLE_DXG_DETECTION:-1}"
 # （自分で学習した / 公式から取得したファイルだけを読み込む前提）
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 
-# VRAM の断片化対策
-export PYTORCH_HIP_ALLOC_CONF="${PYTORCH_HIP_ALLOC_CONF:-expandable_segments:True}"
-
 if [[ -f "${VENV_DIR}/bin/activate" ]]; then
   # shellcheck disable=SC1091
   source "${VENV_DIR}/bin/activate"

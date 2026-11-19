@@ -38,8 +38,23 @@ echo "==> ${DEB_NAME} をダウンロード"
 wget -q -O "${TMP_DIR}/${DEB_NAME}" "${REPO_BASE}/${CODENAME}/${DEB_NAME}"
 sudo apt-get install -y "${TMP_DIR}/${DEB_NAME}"
 
-echo "==> ROCm (WSL 用) をインストール"
-amdgpu-install -y --usecase=wsl,rocm --no-dkms
+# ROCm 7.2 以降は `--usecase=wsl` が廃止された。通常の rocm を入れ、
+# WSL 用には librocdxg（/dev/dxg 経由で GPU を使うためのライブラリ）を別途入れる。
+echo "==> ROCm をインストール"
+sudo amdgpu-install -y --usecase=rocm --no-dkms
+
+# librocdxg のバージョンは ROCm に合わせる（1.2.0 = ROCm 7.2.x 用）
+ROCDXG_VERSION="${ROCDXG_VERSION:-1.2.0}"
+if dpkg -s rocdxg-roct >/dev/null 2>&1; then
+  echo "==> librocdxg は導入済み: $(dpkg-query -W -f='${Version}' rocdxg-roct)"
+else
+  echo "==> librocdxg ${ROCDXG_VERSION} をインストール"
+  ROCDXG_DEB="rocdxg-roct_${ROCDXG_VERSION}_amd64.deb"
+  wget -q -O "${TMP_DIR}/${ROCDXG_DEB}" \
+    "https://github.com/ROCm/librocdxg/releases/download/v${ROCDXG_VERSION}/${ROCDXG_DEB}"
+  sudo dpkg -i "${TMP_DIR}/${ROCDXG_DEB}" || true
+  sudo apt-get install -f -y
+fi
 
 sudo usermod -aG render,video "${USER}" || true
 

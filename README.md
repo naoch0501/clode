@@ -24,7 +24,7 @@
 ## 2. WSL (Ubuntu) でセットアップ
 
 ```bash
-git clone https://github.com/naoch0501/clode.git ~/clode
+git clone -b claude/eloquent-mendel-oq0r99 https://github.com/naoch0501/clode.git ~/clode
 cd ~/clode
 
 bash scripts/01_install_rocm_wsl.sh     # ROCm を入れる（sudo パスワードを聞かれる）
@@ -79,6 +79,9 @@ cd Style-Bert-VITS2
 python server_editor.py      # 読み上げエディタ → Windows のブラウザで http://localhost:8000
 python app.py                # 学習・スタイル作成・マージなどの WebUI → http://localhost:7860
 ```
+
+WebUI の「データセット作成」で文字起こしをする場合は、**HF Whisper を使う設定** にしてください
+（faster-whisper は AMD GPU で動かないため入れていません）。
 
 エディタではアクセントの調整やユーザー辞書の登録ができます。WebUI の「スタイル作成」で、
 喜び・怒りなどの話し方ごとのスタイルを作れます（素材にそういう話し方が含まれている場合）。

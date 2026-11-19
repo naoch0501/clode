@@ -94,13 +94,18 @@ git -C "${SBV2_DIR}" fetch --quiet origin "${SBV2_REF}" || true
 git -C "${SBV2_DIR}" checkout --quiet "${SBV2_REF}" || true
 
 echo "==> 依存パッケージをインストール（torch/torchaudio は除外して ROCm 版を維持）"
+# 除外するもの:
+#   torch/torchaudio/torchvision : 上で入れた ROCm 版を CUDA 版で上書きさせない
+#   faster-whisper : CUDA 専用で、依存の av==10 は Ubuntu 24.04 の ffmpeg ではビルドできない
+#                    （HF Whisper を使うので不要。transcribe.py も使うときだけ import する）
+#   transformers   : 無指定だと 5.x が入るため、下で 4.x に固定して入れる
 REQ_FILTERED="$(mktemp)"
 trap 'rm -f "${REQ_FILTERED}"' EXIT
-grep -viE '^[[:space:]]*(torch|torchaudio|torchvision)([[:space:]<>=!~;\[]|$)' \
+grep -viE '^[[:space:]]*(torch|torchaudio|torchvision|faster-whisper|transformers)([[:space:]<>=!~;\[]|$)' \
   "${SBV2_DIR}/requirements.txt" > "${REQ_FILTERED}"
 uv pip install -r "${REQ_FILTERED}"
-# HF Whisper で文字起こしするため（faster-whisper は CUDA 専用）
-uv pip install "transformers" "accelerate"
+# HF Whisper で文字起こしするため。Style-Bert-VITS2 は transformers 4.x 前提
+uv pip install "transformers<5" "accelerate"
 
 # 依存解決で CUDA 版 torch に置き換わっていないか確認
 if ! python -c 'import torch, sys; sys.exit(0 if torch.version.hip else 1)'; then

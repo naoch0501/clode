@@ -1,5 +1,13 @@
 # トラブルシューティング
 
+## `ERROR: Usecase implementation 'wsl' is not supported or invalid`
+ROCm 7.2 以降で `amdgpu-install --usecase=wsl` が廃止されたため。最新の `scripts/01_install_rocm_wsl.sh`
+（`--usecase=rocm` + librocdxg を導入）を `git pull` してから再実行する。
+
+## `Failed to build av==10.0.0`（faster-whisper の依存）
+faster-whisper は CUDA 専用で、Ubuntu 24.04 ではビルドもできない。最新の `scripts/02_install_sbv2.sh` は
+これを除外して入れる。文字起こしは HF Whisper（`--use_hf_whisper`）を使う。
+
 ## GPU が認識されない（`rocminfo` に出ない / `check_gpu.py` が NG）
 1. Windows 側の Adrenalin ドライバを最新にし、PowerShell で `wsl --update` → `wsl --shutdown`。
 2. 環境変数を確認する: `echo $HSA_ENABLE_DXG_DETECTION` → `1` であること（`source scripts/env.sh` で設定される）。
