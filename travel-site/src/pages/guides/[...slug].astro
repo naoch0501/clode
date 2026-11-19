@@ -1,0 +1,45 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { SITE, CATEGORIES, type Category } from '../../site.config';
+import { getPublishedGuides, formatDate } from '../../lib/guides';
+
+export async function getStaticPaths() {
+  const guides = await getPublishedGuides();
+  return guides.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, description, category, pubDate, updatedDate, heroImage, heroAlt } = entry.data;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description,
+  datePublished: pubDate.toISOString(),
+  dateModified: (updatedDate ?? pubDate).toISOString(),
+  author: { '@type': 'Person', name: SITE.author.name, url: new URL('/about/', Astro.site).href },
+  ...(heroImage && { image: new URL(heroImage, Astro.site).href }),
+};
+---
+<Base title={title} description={description} image={heroImage} type="article" jsonLd={jsonLd}>
+  <article>
+    <a class="tag" href={`/category/${category}/`}>{CATEGORIES[category as Category]}</a>
+    <h1>{title}</h1>
+    <p class="muted">
+      By {SITE.author.name} ·
+      {updatedDate ? <>Last checked {formatDate(updatedDate)}</> : <>Published {formatDate(pubDate)}</>}
+    </p>
+    <p class="disclosure">
+      This page may contain affiliate links. If you book through them, I may earn a small
+      commission at no extra cost to you. <a href="/disclosure/">Learn more</a>.
+    </p>
+    {heroImage && <img src={heroImage} alt={heroAlt ?? ''} />}
+    <Content />
+    <aside class="author-box">
+      <strong>About the author</strong>
+      <p>{SITE.author.bio} <a href="/about/">More about me</a>.</p>
+    </aside>
+  </article>
+</Base>

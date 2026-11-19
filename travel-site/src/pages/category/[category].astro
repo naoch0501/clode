@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import { SITE, CATEGORIES, type Category } from '../../site.config';
+import { getPublishedGuides } from '../../lib/guides';
+
+export function getStaticPaths() {
+  return Object.keys(CATEGORIES).map((category) => ({ params: { category } }));
+}
+const category = Astro.params.category as Category;
+const label = CATEGORIES[category];
+const guides = (await getPublishedGuides()).filter((g) => g.data.category === category);
+---
+<Base title={`${label} in ${SITE.region}`} description={`${label} guides for ${SITE.region}, written by a local.`}>
+  <h1>{label} in {SITE.region}</h1>
+  {guides.length === 0 ? (
+    <p class="muted">No guides in this category yet.</p>
+  ) : (
+    <div class="cards">{guides.map((g) => <GuideCard entry={g} />)}</div>
+  )}
+</Base>

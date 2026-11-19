@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../site.config';
+---
+<Base title="Privacy Policy" description={`Privacy policy for ${SITE.name}.`}>
+  <h1>Privacy Policy</h1>
+  <p class="muted">Last updated: <!-- TODO: 日付 --></p>
+  <h2>What this site collects</h2>
+  <p>
+    This site does not ask you to create an account or submit personal information.
+    <!-- TODO: アクセス解析（Cloudflare Web Analytics / Google Analytics など）を入れたら、ここに名前と目的を書く -->
+  </p>
+  <h2>Affiliate links and cookies</h2>
+  <p>
+    When you click an affiliate link, the partner site may set cookies to record that you came
+    from this site. Those cookies are governed by the partner's own privacy policy.
+  </p>
+  <h2>Contact</h2>
+  <p><!-- TODO: 問い合わせ先（専用のメールアドレスやフォーム） --></p>
+</Base>

@@ -1,0 +1,10 @@
+---
+import { CATEGORIES, type Category } from '../site.config';
+const { entry } = Astro.props;
+const { title, description, category } = entry.data;
+---
+<a class="card" href={`/guides/${entry.id}/`}>
+  <span class="tag">{CATEGORIES[category as Category]}</span>
+  <h3>{title}</h3>
+  <p>{description}</p>
+</a>

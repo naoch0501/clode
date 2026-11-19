@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../site.config';
+---
+<Base title="Affiliate Disclosure" description={`How ${SITE.name} earns money.`}>
+  <h1>Affiliate Disclosure</h1>
+  <p>
+    {SITE.name} is free to read. To keep it that way, some links on this site are affiliate
+    links. If you click one and make a booking or purchase, I may receive a commission from the
+    seller. The price you pay is the same.
+  </p>
+  <p>
+    Affiliate partners may include tour and activity platforms, hotel booking sites and eSIM
+    providers. I only link to products and services I would use myself, and my recommendations are
+    not paid for.
+  </p>
+  <p>Affiliate links on this site are marked with <code>rel="sponsored"</code>.</p>
+</Base>

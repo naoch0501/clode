@@ -1,0 +1,19 @@
+---
+import Base from '../layouts/Base.astro';
+import GuideCard from '../components/GuideCard.astro';
+import { SITE } from '../site.config';
+import { getPublishedGuides } from '../lib/guides';
+const guides = await getPublishedGuides();
+---
+<Base>
+  <section class="hero">
+    <h1>{SITE.region} travel guide, written by a local</h1>
+    <p>{SITE.tagline}</p>
+  </section>
+  <h2>Latest guides</h2>
+  {guides.length === 0 ? (
+    <p class="muted">Guides are coming soon.</p>
+  ) : (
+    <div class="cards">{guides.map((g) => <GuideCard entry={g} />)}</div>
+  )}
+</Base>
