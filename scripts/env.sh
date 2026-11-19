@@ -7,6 +7,12 @@ export REPO_ROOT="${REPO_ROOT:-$(cd "${_ENV_SH_DIR}/.." && pwd)}"
 export SBV2_DIR="${SBV2_DIR:-${REPO_ROOT}/Style-Bert-VITS2}"
 export VENV_DIR="${VENV_DIR:-${REPO_ROOT}/venv}"
 
+# uv のインストール先（~/.local/bin）を PATH に入れる
+case ":${PATH}:" in
+  *":${HOME}/.local/bin:"*) ;;
+  *) export PATH="${HOME}/.local/bin:${PATH}" ;;
+esac
+
 # --- ROCm on WSL2 -----------------------------------------------------------
 # WSL2 では GPU は /dev/kfd ではなく /dev/dxg 経由で見える。
 export HSA_ENABLE_DXG_DETECTION="${HSA_ENABLE_DXG_DETECTION:-1}"
