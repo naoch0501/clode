@@ -1,0 +1,40 @@
+# config.yaml にコピーして使う:  cp config.example.yaml config.yaml
+provider: comfyui
+
+comfyui:
+  # RunPod の場合: https://<POD_ID>-8188.proxy.runpod.net
+  # ローカルの場合: http://127.0.0.1:8188
+  url: https://YOUR_POD_ID-8188.proxy.runpod.net
+  # 認証付きプロキシを挟む場合のみ。値はファイルに書かず環境変数で渡す
+  api_key_env: COMFYUI_API_KEY
+  timeout: 600
+
+# ワークフロー（参考画像があれば ipadapter、無ければ txt2img を使う）
+workflows:
+  with_reference: workflows/sdxl_ipadapter.json
+  without_reference: workflows/sdxl_txt2img.json
+
+defaults:
+  checkpoint: illustriousXL_v01.safetensors   # ComfyUI/models/checkpoints/ 内のファイル名
+  width: 832
+  height: 1216
+  steps: 28
+  cfg: 5.5
+  sampler: euler_ancestral
+  scheduler: normal
+  ipadapter_preset: "PLUS (high strength)"
+  reference_end_at: 0.8
+  quality_positive: "masterpiece, best quality, very aesthetic, absurdres"
+  negative: "lowres, bad anatomy, bad hands, extra digits, fewer digits, worst quality, low quality, jpeg artifacts, signature, watermark, text"
+
+# レーティングごとに付けるタグ
+ratings:
+  general:
+    positive: "sfw"
+    negative: "nsfw, nude, explicit"
+  r18:
+    positive: "nsfw, explicit"
+    negative: ""
+
+output_dir: outputs
+audit_log: outputs/audit.jsonl

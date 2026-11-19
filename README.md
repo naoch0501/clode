@@ -102,3 +102,8 @@ Style-Bert-VITS2 は公式には NVIDIA (CUDA) 向けです。このリポジト
 - WSL 用に torch 同梱の `libhsa-runtime64.so` を削除し、`HSA_ENABLE_DXG_DETECTION=1` を設定
 - 新しい PyTorch で起きる `torch.load` の `weights_only` エラーを `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` で回避
 - 文字起こしは CUDA 専用の faster-whisper ではなく、Hugging Face 版 Whisper (`--use_hf_whisper`) を使う
+
+---
+
+## 別ツール: イラスト生成 (`illust/`)
+自作キャラクターのデザイン画から成人キャラクターのイラストを生成する CLI です。[illust/README.md](illust/README.md) を参照してください。

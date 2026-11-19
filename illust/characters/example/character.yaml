@@ -1,0 +1,18 @@
+# キャラクター定義。1キャラ1フォルダ。参考画像は同じフォルダに置く。
+name: Example (サンプル)
+# 自作・権利を持つ架空キャラクターであることの宣言（必須）
+source: original
+# 年齢（必須・18以上）
+age: 27
+description: 落ち着いた雰囲気の成人女性。オリジナルキャラクターのサンプル。
+# 外見タグ（Danbooru 形式のタグが通りやすい）
+appearance: "1girl, solo, adult woman, mature female, long silver hair, blue eyes, tall, curvy"
+outfit: "black blazer, white shirt, pencil skirt"
+# キャラクターデザイン画（正面・立ち絵が最も効く）。1枚目を IP-Adapter に使う
+reference_images:
+  - design_front.png
+reference_weight: 0.7
+# キャラ LoRA を学習済みなら指定（ComfyUI/models/loras/ 内のファイル名）
+lora: []
+#  - name: example_char.safetensors
+#    strength: 0.8

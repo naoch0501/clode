@@ -1,0 +1,8 @@
+config.yaml
+outputs/
+characters/*/
+!characters/example/
+*.png
+*.jpg
+*.jpeg
+*.webp
