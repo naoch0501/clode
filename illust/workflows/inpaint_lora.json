@@ -162,7 +162,7 @@
   "20": {
     "class_type": "LoraLoader",
     "inputs": {
-      "lora_name": "meto_oc.safetensors",
+      "lora_name": "meto_oc-000008.safetensors",
       "strength_model": 0.8,
       "strength_clip": 0.8,
       "model": [
