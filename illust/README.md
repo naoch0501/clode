@@ -51,8 +51,8 @@ bash scripts/comfyui.sh          # 起動 → Windows のブラウザで http://
 
 ```bash
 cd illust
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv venv .venv && source .venv/bin/activate     # uv は scripts/02 or 03 で導入済み
+uv pip install -r requirements.txt
 cp config.example.yaml config.yaml      # url と checkpoint を書き換える
 python -m illustgen ping                # GPU 名が表示されれば接続 OK
 ```
