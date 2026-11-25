@@ -151,3 +151,15 @@ def test_generate_blocked_scene(tmp_path):
     cfg_path.write_text((ROOT / "config.example.yaml").read_text())
     with pytest.raises(SystemExit, match="安全チェック"):
         main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "school uniform, loli"])
+
+
+def test_flatten_to_white(tmp_path):
+    from illustgen.providers.comfyui import flatten_to_white
+    p = tmp_path / "t.png"
+    img = Image.new("RGBA", (4, 4), (0, 0, 0, 0))
+    img.putpixel((0, 0), (255, 0, 0, 255))
+    img.save(p)
+    out = Image.open(io.BytesIO(flatten_to_white(p)))
+    assert out.mode == "RGB"
+    assert out.getpixel((1, 1)) == (255, 255, 255)
+    assert out.getpixel((0, 0)) == (255, 0, 0)

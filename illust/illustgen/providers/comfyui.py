@@ -9,12 +9,28 @@ ComfyUI の HTTP API:
 from __future__ import annotations
 
 import copy
+import io
 import json
 import time
 import uuid
 from pathlib import Path
 
 import requests
+from PIL import Image
+
+
+def flatten_to_white(path: Path) -> bytes:
+    """透明部分を白で埋めた PNG を返す（ComfyUI の LoadImage は透明を無視して読むため）。"""
+    with Image.open(path) as img:
+        if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+            rgba = img.convert("RGBA")
+            out = Image.new("RGB", rgba.size, (255, 255, 255))
+            out.paste(rgba, mask=rgba.split()[3])
+        else:
+            out = img.convert("RGB")
+    buf = io.BytesIO()
+    out.save(buf, "PNG")
+    return buf.getvalue()
 
 
 def _fill(obj, values: dict):
@@ -46,13 +62,12 @@ class ComfyUIProvider:
         return r.json()
 
     def upload(self, path: Path) -> str:
-        with path.open("rb") as f:
-            r = self.session.post(
-                f"{self.url}/upload/image",
-                files={"image": (path.name, f)},
-                data={"overwrite": "true"},
-                timeout=120,
-            )
+        r = self.session.post(
+            f"{self.url}/upload/image",
+            files={"image": (f"{path.stem}.png", flatten_to_white(path), "image/png")},
+            data={"overwrite": "true"},
+            timeout=120,
+        )
         r.raise_for_status()
         info = r.json()
         return f"{info['subfolder']}/{info['name']}" if info.get("subfolder") else info["name"]
