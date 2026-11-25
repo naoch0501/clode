@@ -130,13 +130,14 @@ def test_generate_end_to_end(tmp_path):
     char = write_char(tmp_path / "chars/test", lora=[{"name": "c.safetensors"}])
     try:
         main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "sitting, bedroom",
-              "-r", "r18", "--seed", "42", "--start-at", "0.3"])
+              "-r", "r18", "--seed", "42", "--start-at", "0.3", "--no-outfit"])
     finally:
         server.shutdown()
     wf = FakeComfy.received["prompt"]
     assert wf["3"]["inputs"]["seed"] == 42
     assert "nsfw" in wf["6"]["inputs"]["text"] and "adult" in wf["6"]["inputs"]["text"]
     assert "loli" in wf["7"]["inputs"]["text"]
+    assert "red hair" in wf["6"]["inputs"]["text"]
     assert wf["11"]["inputs"]["image"] == "ref.png"
     assert wf["12"]["inputs"]["start_at"] == 0.3 and wf["12"]["inputs"]["end_at"] == 0.8
     assert "lora_0" in wf

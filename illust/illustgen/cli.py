@@ -69,6 +69,11 @@ def cmd_generate(args, cfg) -> None:
             d[key] = getattr(args, key)
     rating = cfg.get("ratings", {}).get(args.rating, {})
 
+    if args.no_outfit:
+        char.outfit = ""
+    elif args.outfit is not None:
+        safety.check_prompt(args.outfit, "outfit")
+        char.outfit = args.outfit
     positive = join(d["quality_positive"], rating.get("positive", ""), safety.FORCED_POSITIVE,
                     char.prompt_fragment(), args.scene)
     negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), args.negative or "")
@@ -129,6 +134,8 @@ def main(argv=None) -> None:
     p.add_argument("--start-at", dest="reference_start_at", type=float,
                    help="参考画像を効かせ始めるタイミング 0.0-1.0（上げると色の濁りが減る）")
     p.add_argument("--end-at", dest="reference_end_at", type=float, help="参考画像を効かせ終わるタイミング 0.0-1.0")
+    p.add_argument("--outfit", help="この回だけ服装タグを差し替える（character.yaml の outfit の代わり）")
+    p.add_argument("--no-outfit", action="store_true", help="この回は服装タグを入れない")
     p.add_argument("--no-reference", action="store_true", help="参考画像を使わない（LoRA のみ）")
     p.add_argument("--width", type=int)
     p.add_argument("--height", type=int)
