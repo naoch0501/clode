@@ -83,7 +83,7 @@ def check_character(char) -> None:
         raise SafetyError(
             f"キャラクター '{char.name}': age は {MIN_AGE} 以上の数値を指定してください（現在: {char.age}）。"
         )
-    for field in ("name", "description", "appearance", "outfit"):
+    for field in ("name", "description", "appearance", "outfit", "trigger"):
         check_prompt(str(getattr(char, field) or ""), f"キャラクター '{char.name}' の {field}")
 
 

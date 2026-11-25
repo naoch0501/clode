@@ -95,6 +95,63 @@ python -m illustgen generate -c characters/mychar -s "sitting, cafe" --weight 0.
 | `--no-reference` | 参考画像を使わない(LoRA だけで描く) |
 | `--width --height --steps --cfg --checkpoint` | 設定ファイルの既定値を上書き |
 
+## 5. キャラクター LoRA を作る(手元の GPU で学習)
+
+参考画像(IP-Adapter)だけでは、キャップの形や髪型などの細部が安定しません。
+キャラクターの LoRA を作ると、参考画像なしで同じキャラクターを描けるようになり、服装もタグで切り替えられます。
+
+### 準備(最初の 1 回)
+```bash
+cd ~/clode
+bash scripts/04_install_lora_trainer.sh          # sd-scripts を venv-train/ に入れる(PyTorch は使い回し)
+cd illust && source .venv/bin/activate
+uv pip install -r requirements-lora.txt           # 自動タグ付けの部品
+```
+
+### 学習画像を集める
+`characters/<名前>/train/` に、そのキャラクターの画像を **15〜30 枚** 置きます。
+- 三面図は 1 体ずつ切り出す(正面・横・後ろを別々の画像に)
+- 表情、ポーズ、構図(顔のアップ・上半身・全身)がばらけているほどよい
+- 生成した画像のうち、よく似ているものを加えてもよい
+- 背景は白か透明が扱いやすい(透明は自動で白にします)
+- **実在人物の写真、未成年に見える絵、R18 の絵は入れない**(一般向けのデザイン画でよい)
+
+### 学習データを作る(自動タグ付け)
+```bash
+python -m illustgen lora-prep -c characters/meto
+```
+- 各画像にタグを付け、`characters/meto/lora/dataset/` に保存します(初回はタグ付け用モデル約 400MB を取得)。
+- 髪・目など **キャラ固有の特徴のタグは外し**、代わりにトリガーワード(例: `meto_oc`)を付けます。
+  これで「meto_oc」という言葉にキャラの見た目が覚えられます。服装のタグは残すので、服は後から変えられます。
+- 未成年・実写と判定されるタグが付いた画像があると止まります。
+- 表示されたとおり、`character.yaml` に `trigger: meto_oc` を追加します。
+
+### 学習する
+**ComfyUI のターミナルで Ctrl+C を押して ComfyUI を止めてから** 実行します(VRAM を空けるため)。
+```bash
+python -m illustgen lora-train -c characters/meto
+```
+- 既定: 10 エポック、合計 約 1600 ステップ。RX 9070 XT で 1〜2 時間程度が目安です。
+- 結果は `ComfyUI/models/loras/meto_oc.safetensors`。2 エポックごとの途中経過(`meto_oc-000002` …)も残ります。
+- `--dry-run` で、実行するコマンドだけを確認できます。
+
+### 使う
+`character.yaml` に追記します:
+```yaml
+trigger: meto_oc
+lora:
+  - name: meto_oc.safetensors
+    strength: 0.8
+```
+ComfyUI を起動し直してから、参考画像なしで生成します:
+```bash
+python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot" --no-reference
+# 途中経過のほうがよい場合もあるので比べる
+python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot" --no-reference --lora meto_oc-000006 --seed 1
+```
+似すぎて崩れる・絵が固い → 強さを下げる(`--lora meto_oc:0.6`)か、早いエポックを使う。
+似ない → 強さを上げる、エポックを増やす(`--epochs 14`)、学習画像を増やす。
+
 ## ファイル構成
 
 | パス | 内容 |
@@ -102,6 +159,7 @@ python -m illustgen generate -c characters/mychar -s "sitting, cafe" --weight 0.
 | `illustgen/cli.py` | コマンド本体(プロンプト組み立て・生成・保存) |
 | `illustgen/safety.py` | 安全チェック(年齢・禁止語・写真判定・強制プロンプト) |
 | `illustgen/character.py` | `character.yaml` の読み込み |
+| `illustgen/lora.py` | LoRA 学習データの準備(自動タグ付け)と学習コマンド |
 | `illustgen/providers/comfyui.py` | ComfyUI API クライアント、LoRA の自動挿入 |
 | `workflows/sdxl_ipadapter.json` | 参考画像あり(IP-Adapter)のワークフロー |
 | `workflows/sdxl_txt2img.json` | 参考画像なしのワークフロー |

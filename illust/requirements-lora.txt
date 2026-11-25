@@ -1,0 +1,4 @@
+# LoRA 学習データ準備（自動タグ付け）用
+onnxruntime>=1.17
+numpy>=1.24
+huggingface_hub>=0.20

@@ -164,3 +164,78 @@ def test_flatten_to_white(tmp_path):
     assert out.mode == "RGB"
     assert out.getpixel((1, 1)) == (255, 255, 255)
     assert out.getpixel((0, 0)) == (255, 0, 0)
+
+
+# --- LoRA ---------------------------------------------------------------------
+from illustgen import lora  # noqa: E402
+
+
+def fake_tagger(tags):
+    return lambda img: list(tags)
+
+
+def test_build_caption_prunes_intrinsic_tags():
+    char = Character(name="t", age=25, declared_original=True, appearance="1girl, silver hair, purple eyes, slim waist")
+    cap = lora.build_caption("meto_oc", ["1girl", "solo", "silver hair", "short hair", "purple eyes", "messy bangs",
+                                         "slim waist", "smile", "black shorts", "white background"], char)
+    assert cap == "meto_oc, 1girl, solo, smile, black shorts, white background"
+
+
+def test_prepare_dataset(tmp_path):
+    d = write_char(tmp_path / "chars/meto")
+    (d / "train").mkdir()
+    png(d / "train" / "a.png")
+    png(d / "train" / "b.png")
+    out = lora.prepare(d, Character.load(d), "meto_oc", tagger=fake_tagger(["1girl", "red hair", "smile"]))
+    assert sorted(p.name for p in out.iterdir()) == ["001.png", "001.txt", "002.png", "002.txt"]
+    assert (out / "001.txt").read_text() == "meto_oc, 1girl, smile"
+
+
+def test_prepare_rejects_minor_or_photo_tags(tmp_path):
+    d = write_char(tmp_path / "chars/meto")
+    (d / "train").mkdir()
+    png(d / "train" / "a.png")
+    with pytest.raises(safety.SafetyError, match="a.png"):
+        lora.prepare(d, Character.load(d), "meto_oc", tagger=fake_tagger(["1girl", "loli"]))
+    with pytest.raises(safety.SafetyError, match="realistic"):
+        lora.prepare(d, Character.load(d), "meto_oc", tagger=fake_tagger(["1girl", "realistic"]))
+    assert not list((d / "lora" / "dataset").iterdir())
+
+
+def test_prepare_requires_images(tmp_path):
+    d = write_char(tmp_path / "chars/meto")
+    with pytest.raises(safety.SafetyError, match="train"):
+        lora.prepare(d, Character.load(d), "meto_oc", tagger=fake_tagger([]))
+
+
+def test_toml_and_command(tmp_path):
+    t = lora.dataset_toml(tmp_path / "ds", 8)
+    assert "num_repeats = 8" in t and "shuffle_caption = false" in t
+    assert lora.auto_repeats(20, 10) == 8
+    cmd = lora.train_command(tmp_path, tmp_path / "m.safetensors", tmp_path / "d.toml", tmp_path / "out",
+                             "meto_oc", 10, 16, 1e-4, tmp_path / "logs")
+    assert "--network_train_unet_only" in cmd and "--cache_text_encoder_outputs" in cmd
+    assert cmd[cmd.index("--network_alpha") + 1] == "8"
+    assert lora.default_trigger(Path("characters/Meto-2")) == "meto2_oc"
+
+
+def test_trigger_and_lora_override_in_generate(tmp_path):
+    server = HTTPServer(("127.0.0.1", 0), FakeComfy)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    cfg = __import__("yaml").safe_load((ROOT / "config.example.yaml").read_text())
+    cfg["comfyui"]["url"] = f"http://127.0.0.1:{server.server_port}"
+    cfg["output_dir"] = str(tmp_path / "out")
+    cfg["audit_log"] = str(tmp_path / "out/audit.jsonl")
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(json.dumps(cfg))
+    char = write_char(tmp_path / "chars/meto", trigger="meto_oc")
+    try:
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile", "--no-reference",
+              "--lora", "meto_oc-000006:0.9"])
+    finally:
+        server.shutdown()
+    wf = FakeComfy.received["prompt"]
+    assert "meto_oc" in wf["6"]["inputs"]["text"]
+    assert wf["lora_0"]["inputs"]["lora_name"] == "meto_oc-000006.safetensors"
+    assert wf["lora_0"]["inputs"]["strength_model"] == 0.9
+    assert "11" not in wf  # 参考画像なし → txt2img

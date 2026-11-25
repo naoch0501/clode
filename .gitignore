@@ -16,3 +16,5 @@ __pycache__/
 # ComfyUI（scripts/03_install_comfyui.sh が作成）
 ComfyUI/
 venv-comfyui/
+sd-scripts/
+venv-train/

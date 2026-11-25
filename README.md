@@ -95,6 +95,7 @@ python app.py                # 学習・スタイル作成・マージなどの 
 | `scripts/speak.py` | テキスト → wav |
 | `scripts/03_install_comfyui.sh` | ComfyUI・IP-Adapter・モデルを `venv-comfyui/` に入れる（イラスト生成用） |
 | `scripts/comfyui.sh` | ComfyUI を起動 |
+| `scripts/04_install_lora_trainer.sh` | キャラクター LoRA 学習用の sd-scripts を `venv-train/` に入れる |
 | `inputs/<名前>/` | 録音ファイル置き場（git 管理外） |
 | `Style-Bert-VITS2/` | 本体（02 で clone、git 管理外）。学習データは `Data/`、完成モデルは `model_assets/` |
 

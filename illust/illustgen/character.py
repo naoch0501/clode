@@ -17,6 +17,7 @@ class Character:
     lora: list[dict] = field(default_factory=list)
     reference_images: list[Path] = field(default_factory=list)
     reference_weight: float = 0.7
+    trigger: str = ""
 
     @classmethod
     def load(cls, path: str | Path) -> "Character":
@@ -37,7 +38,9 @@ class Character:
             lora=data.get("lora", []) or [],
             reference_images=refs,
             reference_weight=float(data.get("reference_weight", 0.7)),
+            trigger=str(data.get("trigger") or ""),
         )
 
     def prompt_fragment(self) -> str:
-        return ", ".join(p for p in (self.appearance, self.outfit) if p)
+        trigger = self.trigger if self.lora else ""
+        return ", ".join(p for p in (trigger, self.appearance, self.outfit) if p)

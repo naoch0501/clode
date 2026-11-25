@@ -12,6 +12,8 @@ outfit: "black blazer, white shirt, pencil skirt"
 reference_images:
   - design_front.png
 reference_weight: 0.7
+# LoRA を学習したら、トリガーワードとファイル名を書く（README の 5 章）
+# trigger: example_oc
 # キャラ LoRA を学習済みなら指定（ComfyUI/models/loras/ 内のファイル名）
 lora: []
 #  - name: example_char.safetensors
