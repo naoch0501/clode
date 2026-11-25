@@ -117,7 +117,7 @@
       "weight": "{{reference_weight}}",
       "weight_type": "linear",
       "combine_embeds": "concat",
-      "start_at": 0.0,
+      "start_at": "{{reference_start_at}}",
       "end_at": "{{reference_end_at}}",
       "embeds_scaling": "V only"
     }

@@ -63,8 +63,8 @@ def cmd_generate(args, cfg) -> None:
     char = Character.load(args.character)
     validate(char, args.scene, args.negative or "")
 
-    d = {**cfg["defaults"]}
-    for key in ("width", "height", "steps", "cfg", "checkpoint"):
+    d = {"reference_start_at": 0.0, "reference_end_at": 0.8, **cfg["defaults"]}
+    for key in ("width", "height", "steps", "cfg", "checkpoint", "reference_start_at", "reference_end_at"):
         if getattr(args, key) is not None:
             d[key] = getattr(args, key)
     rating = cfg.get("ratings", {}).get(args.rating, {})
@@ -126,6 +126,9 @@ def main(argv=None) -> None:
     p.add_argument("--seed", type=int)
     p.add_argument("--negative", help="追加のネガティブプロンプト")
     p.add_argument("--weight", type=float, help="参考画像の効き具合 (0.0-1.0)")
+    p.add_argument("--start-at", dest="reference_start_at", type=float,
+                   help="参考画像を効かせ始めるタイミング 0.0-1.0（上げると色の濁りが減る）")
+    p.add_argument("--end-at", dest="reference_end_at", type=float, help="参考画像を効かせ終わるタイミング 0.0-1.0")
     p.add_argument("--no-reference", action="store_true", help="参考画像を使わない（LoRA のみ）")
     p.add_argument("--width", type=int)
     p.add_argument("--height", type=int)

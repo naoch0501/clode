@@ -90,6 +90,7 @@ python -m illustgen generate -c characters/mychar -s "sitting, cafe" --weight 0.
 | `-r general / r18` | レーティング。既定は general |
 | `-n` | 枚数(seed を 1 ずつ増やす) |
 | `--weight` | 参考画像の強さ 0.0〜1.0(既定はキャラ定義の `reference_weight`) |
+| `--start-at` / `--end-at` | 参考画像を効かせる区間 0.0〜1.0。色が濁るときは `--start-at 0.3` など |
 | `--no-reference` | 参考画像を使わない(LoRA だけで描く) |
 | `--width --height --steps --cfg --checkpoint` | 設定ファイルの既定値を上書き |
 

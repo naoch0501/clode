@@ -79,7 +79,7 @@ def test_fill_and_loras():
     assert wf["8"]["inputs"]["vae"] == ["4", 2]
     filled = _fill(wf, {k: 1 for k in ["checkpoint", "positive", "negative", "width", "height", "batch_size",
                                        "seed", "steps", "cfg", "sampler", "scheduler", "ipadapter_preset",
-                                       "reference_image", "reference_weight", "reference_end_at"]})
+                                       "reference_image", "reference_weight", "reference_start_at", "reference_end_at"]})
     assert "{{" not in json.dumps(filled)
     with pytest.raises(KeyError):
         _fill(wf, {})
@@ -130,7 +130,7 @@ def test_generate_end_to_end(tmp_path):
     char = write_char(tmp_path / "chars/test", lora=[{"name": "c.safetensors"}])
     try:
         main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "sitting, bedroom",
-              "-r", "r18", "--seed", "42"])
+              "-r", "r18", "--seed", "42", "--start-at", "0.3"])
     finally:
         server.shutdown()
     wf = FakeComfy.received["prompt"]
@@ -138,6 +138,7 @@ def test_generate_end_to_end(tmp_path):
     assert "nsfw" in wf["6"]["inputs"]["text"] and "adult" in wf["6"]["inputs"]["text"]
     assert "loli" in wf["7"]["inputs"]["text"]
     assert wf["11"]["inputs"]["image"] == "ref.png"
+    assert wf["12"]["inputs"]["start_at"] == 0.3 and wf["12"]["inputs"]["end_at"] == 0.8
     assert "lora_0" in wf
     assert len(list((tmp_path / "out/test").glob("*.png"))) == 1
     log = json.loads((tmp_path / "out/audit.jsonl").read_text().splitlines()[0])

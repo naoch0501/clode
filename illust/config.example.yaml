@@ -23,7 +23,8 @@ defaults:
   sampler: euler_ancestral
   scheduler: normal
   ipadapter_preset: "PLUS (high strength)"
-  reference_end_at: 0.8
+  reference_start_at: 0.0   # 参考画像を効かせ始めるタイミング (0.0-1.0)。上げると色の濁りが減る
+  reference_end_at: 0.8     # 効かせ終わるタイミング
   quality_positive: "masterpiece, best quality, very aesthetic, absurdres"
   negative: "lowres, bad anatomy, bad hands, extra digits, fewer digits, worst quality, low quality, jpeg artifacts, signature, watermark, text"
 
