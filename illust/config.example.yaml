@@ -2,9 +2,9 @@
 provider: comfyui
 
 comfyui:
+  # ローカル (scripts/comfyui.sh で起動) の場合: http://127.0.0.1:8188
   # RunPod の場合: https://<POD_ID>-8188.proxy.runpod.net
-  # ローカルの場合: http://127.0.0.1:8188
-  url: https://YOUR_POD_ID-8188.proxy.runpod.net
+  url: http://127.0.0.1:8188
   # 認証付きプロキシを挟む場合のみ。値はファイルに書かず環境変数で渡す
   api_key_env: COMFYUI_API_KEY
   timeout: 600

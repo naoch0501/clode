@@ -93,6 +93,8 @@ python app.py                # 学習・スタイル作成・マージなどの 
 | `scripts/check_gpu.py` | GPU が学習に使えるかの確認 |
 | `scripts/train.sh` | 分割・文字起こし・前処理・学習 |
 | `scripts/speak.py` | テキスト → wav |
+| `scripts/03_install_comfyui.sh` | ComfyUI・IP-Adapter・モデルを `venv-comfyui/` に入れる（イラスト生成用） |
+| `scripts/comfyui.sh` | ComfyUI を起動 |
 | `inputs/<名前>/` | 録音ファイル置き場（git 管理外） |
 | `Style-Bert-VITS2/` | 本体（02 で clone、git 管理外）。学習データは `Data/`、完成モデルは `model_assets/` |
 
@@ -107,3 +109,9 @@ Style-Bert-VITS2 は公式には NVIDIA (CUDA) 向けです。このリポジト
 
 ## 別ツール: イラスト生成 (`illust/`)
 自作キャラクターのデザイン画から成人キャラクターのイラストを生成する CLI です。[illust/README.md](illust/README.md) を参照してください。
+
+同じ GPU 環境で ComfyUI を動かせます（PyTorch は 02 のものを再利用）:
+```bash
+bash scripts/03_install_comfyui.sh     # ComfyUI + IP-Adapter + モデル（venv-comfyui/ に入る）
+bash scripts/comfyui.sh                # 起動 → http://localhost:8188
+```

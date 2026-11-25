@@ -4,7 +4,7 @@
 外部 GPU 上の **ComfyUI** で生成する CLI です。
 
 ```
-characters/<名前>/            安全チェック          ComfyUI (RunPod)               outputs/<名前>/
+characters/<名前>/            安全チェック          ComfyUI (自分のPC/RunPod)        outputs/<名前>/
   character.yaml  ─────────►  年齢・語句・写真判定 ─► IP-Adapter(参考画像) + LoRA ─► PNG + audit.jsonl
   design_front.png
 ```
@@ -22,16 +22,30 @@ characters/<名前>/            安全チェック          ComfyUI (RunPod)    
 自動チェックは完全ではありません。版権キャラクターや、実在人物を描き起こした画像を参考画像に使わないでください。
 生成物の公開は、投稿先の規約と法令(日本ではわいせつ物頒布等の規制によるモザイク処理など)に従ってください。
 
-## 1. 外部 GPU (RunPod + ComfyUI) を用意する
+## 1. ComfyUI を用意する
 
-手順は [docs/runpod-setup.md](docs/runpod-setup.md) にあります。概要は次のとおりです。
+### A. 自分の PC (RX 9070 XT / WSL2) — おすすめ
+音声合成用に `scripts/01_install_rocm_wsl.sh` と `02_install_sbv2.sh` を済ませてあれば、
+02 の PyTorch を使い回すので、大きなダウンロードは IP-Adapter のモデル(約 3.5GB)だけです。
 
-1. RunPod で ComfyUI テンプレートの Pod を起動する(VRAM 16GB 以上。RTX 4090 / A5000 など)
-2. カスタムノード **ComfyUI_IPAdapter_plus** と、IP-Adapter・CLIP Vision のモデルを入れる
-3. SDXL 系のアニメ調チェックポイント(Illustrious XL 系など)を `models/checkpoints/` に置く
-4. Pod の URL `https://<POD_ID>-8188.proxy.runpod.net` を `config.yaml` に書く
+```bash
+cd ~/clode
+bash scripts/03_install_comfyui.sh     # ComfyUI + IP-Adapter ノード + モデル。最後に GPU 確認が「OK」と出れば成功
+```
 
-自分の PC の ComfyUI を使う場合は、URL を `http://127.0.0.1:8188` にするだけで動きます。
+画像生成モデル(SDXL 系のアニメ調モデル。Illustrious XL / NoobAI XL 系など)を
+`ComfyUI/models/checkpoints/` に置きます。URL が分かっていれば、ダウンロードも同時に行えます:
+`CHECKPOINT_URL="https://civitai.com/api/download/models/<ID>" CIVITAI_TOKEN=<キー> bash scripts/03_install_comfyui.sh`
+
+```bash
+bash scripts/comfyui.sh          # 起動 → Windows のブラウザで http://localhost:8188
+```
+`config.yaml` の `comfyui.url` は `http://127.0.0.1:8188` にします。
+真っ黒な画像が出る場合は `bash scripts/comfyui.sh --fp32-vae`、VRAM 不足なら `--lowvram` を付けます。
+
+### B. RunPod(GPU を借りる)
+手順は [docs/runpod-setup.md](docs/runpod-setup.md) にあります。Pod の URL
+`https://<POD_ID>-8188.proxy.runpod.net` を `config.yaml` に書きます。
 
 ## 2. セットアップ
 

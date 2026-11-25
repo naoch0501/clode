@@ -47,3 +47,25 @@ python train_ms_jp_extra.py --skip_default_style
 WSL2 の `localhost` は Windows から自動で転送される。`http://localhost:7860`（WebUI）や
 `http://localhost:8000`（エディタ）を Windows のブラウザで開く。開けない場合は `--host 0.0.0.0` を付けて起動し、
 WSL の IP（`hostname -I`）で開く。
+
+## ComfyUI（イラスト生成）
+
+### `check_gpu.py` は OK なのに ComfyUI が CPU で動く / `torch` が CUDA 版になっている
+カスタムノードの依存解決で torch が置き換わった可能性がある。
+`venv-comfyui/bin/python -c "import torch; print(torch.version.hip)"` が `None` なら、
+`rm -rf venv-comfyui` してから `bash scripts/03_install_comfyui.sh` を再実行する。
+
+### 真っ黒な画像が出る / VAE で落ちる
+`bash scripts/comfyui.sh --fp32-vae` で起動する。VRAM 不足なら `--lowvram` も付ける。
+
+### 生成中に落ちる・画像が崩れる
+高速 attention を切って試す: `AOTRITON=0 bash scripts/comfyui.sh`
+
+### 最初の 1 枚が極端に遅い
+初回は GPU カーネルの探索・コンパイルが走るため。2 枚目以降は速くなる（結果はキャッシュされる）。
+
+### `IPAdapterUnifiedLoader` が見つからない / `ClipVision model not found`
+- `ComfyUI/custom_nodes/ComfyUI_IPAdapter_plus` があるか確認し、ComfyUI を再起動する。
+- `ComfyUI/models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` と
+  `ComfyUI/models/ipadapter/ip-adapter-plus_sdxl_vit-h.safetensors` があるか確認する
+  （03 を再実行すると足りないものだけ取得する）。
