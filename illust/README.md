@@ -152,6 +152,19 @@ python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot
 似すぎて崩れる・絵が固い → 強さを下げる(`--lora meto_oc:0.6`)か、早いエポックを使う。
 似ない → 強さを上げる、エポックを増やす(`--epochs 14`)、学習画像を増やす。
 
+## 6. 画像の一部だけ直す(インペイント)
+
+ComfyUI の画面で使うワークフローを用意しています(illustgen の安全チェックは通らないので、
+成人の自作キャラクターの画像だけに使ってください)。
+
+1. `workflows/inpaint.json`(LoRA を作ったあとは `inpaint_lora.json`)を ComfyUI の画面にドラッグ&ドロップ
+2. 「直したい画像」ノードの **upload** から画像を選ぶ
+3. そのノードを右クリック → **マスクエディタで開く** → 直したい部分を塗って **保存**
+4. Positive に直したあとの内容のタグを書く(例: `smile, closed mouth` / `detailed hands, five fingers`)
+5. 「生成」ノードの **denoise** を調整して実行(0.4〜0.6: 軽く直す、0.7〜1.0: 大きく変える)
+
+塗った部分以外は元の画像のまま残ります。結果は `ComfyUI/output/inpaint_*.png` です。
+
 ## ファイル構成
 
 | パス | 内容 |
@@ -162,6 +175,7 @@ python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot
 | `illustgen/lora.py` | LoRA 学習データの準備(自動タグ付け)と学習コマンド |
 | `illustgen/providers/comfyui.py` | ComfyUI API クライアント、LoRA の自動挿入 |
 | `workflows/sdxl_ipadapter.json` | 参考画像あり(IP-Adapter)のワークフロー |
+| `workflows/inpaint.json` / `inpaint_lora.json` | ComfyUI の画面で使うインペイント用(LoRA なし / あり) |
 | `workflows/sdxl_txt2img.json` | 参考画像なしのワークフロー |
 | `tests/` | `python -m pytest tests` |
 

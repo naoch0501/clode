@@ -1,0 +1,181 @@
+{
+  "4": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "WAI-Nsfw-Illustrious-17.safetensors"
+    },
+    "_meta": {
+      "title": "モデル"
+    }
+  },
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "edit_me.png"
+    },
+    "_meta": {
+      "title": "直したい画像（右クリック→マスクエディタで塗る）"
+    }
+  },
+  "14": {
+    "class_type": "GrowMask",
+    "inputs": {
+      "mask": [
+        "10",
+        1
+      ],
+      "expand": 8,
+      "tapered_corners": true
+    },
+    "_meta": {
+      "title": "マスクを少し広げる（境目をなじませる）"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "masterpiece, best quality, amazing quality, adult, mature, meto_oc, 1girl, solo, adult woman, mature female, (ここに直したい内容のタグを書く)",
+      "clip": [
+        "20",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "直したあとの内容（Positive）"
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "child, loli, shota, minor, underage, teen, young, aged down, flat chest, school uniform, photo, photorealistic, realistic, real person, bad quality, worst quality, lowres, bad anatomy, bad hands, watermark",
+      "clip": [
+        "20",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "11": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "10",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    }
+  },
+  "12": {
+    "class_type": "SetLatentNoiseMask",
+    "inputs": {
+      "samples": [
+        "11",
+        0
+      ],
+      "mask": [
+        "14",
+        0
+      ]
+    }
+  },
+  "3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 1,
+      "steps": 28,
+      "cfg": 5.5,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "normal",
+      "denoise": 0.6,
+      "model": [
+        "20",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "12",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "生成（denoise: 0.4-0.6 軽く直す / 0.7-1.0 大きく変える）"
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    }
+  },
+  "13": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "10",
+        0
+      ],
+      "source": [
+        "8",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "14",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "塗った部分だけ元画像に合成"
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "inpaint",
+      "images": [
+        "13",
+        0
+      ]
+    }
+  },
+  "20": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "lora_name": "meto_oc.safetensors",
+      "strength_model": 0.8,
+      "strength_clip": 0.8,
+      "model": [
+        "4",
+        0
+      ],
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "キャラ LoRA"
+    }
+  }
+}
