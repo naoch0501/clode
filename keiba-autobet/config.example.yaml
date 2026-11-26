@@ -1,0 +1,35 @@
+# config.yaml にコピーして使います:  copy config.example.yaml config.yaml
+
+# true にして、さらに `run --live` を付けたときだけ実際に投票します。
+# 最初は false のまま模擬投票で動作を確認してください。
+live_enabled: false
+
+# 購入上限（必須）。超える買い目は投票せず、履歴に理由を残します。
+limits:
+  max_per_bet: 1000          # 1 点あたりの金額
+  max_per_race: 3000         # 1 レースあたりの合計（全戦略の合計）
+  max_per_day: 10000         # 1 日あたりの合計
+  min_balance: 0             # 購入後の残高がこれを下回るなら投票しない
+  max_points_per_race: 30    # 1 レースあたりの点数
+
+schedule:
+  lead_minutes: 5            # 発走 5 分前にオッズを取得して判定
+  cutoff_minutes: 2          # 発走 2 分前を過ぎたら投票しない
+  poll_seconds: 30
+
+# 対象の競馬場（空なら全競馬場）。例: [大井, 川崎, 船橋, 浦和]
+tracks: []
+
+ledger_path: data/ledger.sqlite3
+log_dir: logs
+
+# 結果通知（任意）: Discord / Slack の Webhook URL
+webhook_url: ""
+
+voter:
+  headless: false            # 最初は false（ブラウザを表示）推奨
+  slow_mo_ms: 100
+  profile_dir: data/browser-profile    # ログイン状態を保存するブラウザプロファイル
+  # channel: chrome                       # インストール済みの Google Chrome を使う場合
+  # selectors: my_selectors_rakuten.yaml  # 画面手順を直したコピーを使う場合
+  # dry_balance: 10000                    # 模擬投票時の仮の残高（min_balance の確認用）

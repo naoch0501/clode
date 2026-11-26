@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keiba-autobet"
+version = "0.1.0"
+description = "条件に応じて地方競馬（楽天競馬）へ自動投票するツール"
+requires-python = ">=3.10"
+dependencies = [
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "lxml>=5.0",
+  "pyyaml>=6.0",
+  "keyring>=24.0",
+  "tzdata>=2024.1",
+]
+
+[project.optional-dependencies]
+live = ["playwright>=1.45"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+keiba-autobet = "keiba_autobet.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+keiba_autobet = ["voter/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

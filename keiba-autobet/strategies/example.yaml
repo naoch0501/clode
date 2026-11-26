@@ -1,0 +1,75 @@
+# 戦略（条件と買い方）のサンプル。自分用にコピーして編集し、-s で指定します。
+#
+# when.race  … レースの条件     when.entry … 買う候補の馬の条件
+# select     … 候補の並べ替え・絞り込み    bet … 券種・金額・組み方
+#
+# 値の書き方:
+#   項目: 値               … 一致         （例 surface: ダ）
+#   項目: [値1, 値2]       … いずれか一致  （例 track: [大井, 川崎]）
+#   項目: {min: 1, max: 3} … 範囲（以上・以下）
+#   項目: {not_in: [...]}  … 含まない     項目: {contains: 文字列} … 部分一致
+
+# 独自スコア（任意）。CSV（race_id,number,score）か Python 関数で読み込みます。
+scores:
+  my_scores:
+    csv: ../data/scores.csv
+
+strategies:
+  # 1) 1番人気がやや人気薄のときに複勝
+  - name: ダ短距離_1番人気複勝
+    when:
+      race:
+        surface: ダ
+        distance: {max: 1400}
+        runners: {min: 8}
+      entry:
+        popularity: 1
+        win_odds: {min: 2.0, max: 4.0}
+    bet: {type: 複勝, amount: 300}
+
+  # 2) 南関東で上位人気 3 頭の馬複ボックス（1番人気が抜けていないレースだけ）
+  - name: 南関_上位3頭馬複BOX
+    when:
+      race:
+        track: [大井, 川崎, 船橋, 浦和]
+        favorite_odds: {min: 3.0}
+      entry:
+        popularity: {max: 3}
+    select: {min_candidates: 3}
+    bet: {type: 馬複, combine: box, amount: 100}
+
+  # 3) 特定騎手の騎乗馬（5番人気以内）の単勝。騎手名は楽天の表記（略称）で部分一致させるのが確実
+  - name: 騎手狙い単勝
+    when:
+      entry:
+        jockey: {contains: [森泰, 笹川翼]}
+        popularity: {max: 5}
+    bet: {type: 単勝, amount: 200}
+
+  # 4) 1番人気を軸に 2〜5 番人気へワイド流し
+  - name: 1番人気軸ワイド流し
+    enabled: false
+    when:
+      entry:
+        popularity: {min: 2, max: 5}         # 相手
+    bet:
+      type: ワイド
+      combine: nagashi
+      axis: {popularity: 1}                  # 軸
+      amount: 100
+
+  # 5) 独自スコアの上位 2 頭 → 上位 5 頭への 3連単フォーメーション
+  - name: スコア上位3連単
+    enabled: false
+    when:
+      entry:
+        score: {source: my_scores, min: 50}
+    bet:
+      type: 3連単
+      combine: formation
+      legs:
+        - {score: {source: my_scores, min: 50}, sort: "-score:my_scores", top: 2}   # 1着
+        - {score: {source: my_scores, min: 50}, sort: "-score:my_scores", top: 5}   # 2着
+        - {score: {source: my_scores, min: 50}, sort: "-score:my_scores", top: 5}   # 3着
+      amount: 100
+      max_points: 30

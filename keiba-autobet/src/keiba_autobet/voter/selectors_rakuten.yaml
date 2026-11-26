@@ -1,0 +1,79 @@
+# 楽天競馬の投票画面の操作手順（Playwright セレクタ）
+#
+# ⚠ ログイン後の投票画面はこのツールの作者が実際に確認できていません。
+#   「要確認」と書いた行は推測です。初回は必ず
+#     keiba-autobet check --headed --race <RACEID>
+#   を実行し、表示されたブラウザと Playwright Inspector（「Pick locator」）で
+#   正しいセレクタを調べて、このファイルのコピーを直してください。
+#   コピーの場所は config.yaml の voter.selectors で指定します。
+#
+# 使える書き方は src/keiba_autobet/voter/steps.py の先頭コメントを参照。
+# 使える変数: {user_id} {password} {pin} {race_id} {race_no} {bet_type}
+#   {selection} {amount} {units}(=100円単位の口数) {total} {total_fmt}(=1,000 形式) {points}
+#   for_each_leg 内では {pos}(1着/1頭目=1…) {n}(馬番/枠番) {n2}(2桁0埋め)
+
+urls:
+  top: https://keiba.rakuten.co.jp/
+  bet_top: https://bet.keiba.rakuten.co.jp/            # 要確認
+  bet_race: https://bet.keiba.rakuten.co.jp/bet/normal/RACEID/{race_id}   # 要確認
+
+# ログイン済みかの判定（失敗＝未ログイン）
+logged_in_check:
+  - goto: "{bet_top}"
+  - wait_for: { selector: "text=ログアウト", timeout_sec: 8 }   # 要確認
+
+login:
+  - goto: "{bet_top}"
+  - optional:                                   # 「ログイン」リンクがある場合
+      - click: "text=ログイン"
+  # 楽天ID のログイン画面（ID → 次へ → パスワード の 2 段階形式）
+  - optional:
+      - fill: { selector: "#user_id", value: "{user_id}" }
+      - click: "text=次へ"
+  - optional:
+      - fill: { selector: "#password_current", value: "{password}" }
+      - click: "text=ログイン"
+  # 旧形式のログイン画面
+  - optional:
+      - fill: { selector: "#loginInner_u", value: "{user_id}" }
+      - fill: { selector: "#loginInner_p", value: "{password}" }
+      - click: "input[name=submit]"
+  # 2段階認証などが出たら headed のブラウザで手動入力してください（最大 3 分待ちます）
+  - wait_for: { selector: "text=ログアウト", timeout_sec: 180 }   # 要確認
+
+# 購入限度額（残高）の読み取り。変数 balance に「12,300円」のような文字列が入れば OK
+balance:
+  - goto: "{bet_top}"
+  - read_text: { selector: ".balance, .purchaseLimit", var: balance }   # 要確認
+
+# レースの投票画面を開く
+open_race:
+  - optional:                                    # 前回の失敗で残った買い目を消す
+      - goto: "{bet_top}"
+      - click: "text=全て削除"                    # 要確認
+  - goto: "{bet_race}"
+  - wait_for: "text={race_no}R"                  # 要確認
+
+# 買い目 1 点を投票リストに追加（買い目の点数ぶん繰り返し呼ばれる）
+add_bet:
+  - click: "text={bet_type}"                     # 券種タブ                       要確認
+  - optional:
+      - click: "text=通常"                        # 「通常/ボックス/流し」のうち通常   要確認
+  - for_each_leg:
+      # 単勝・複勝なら {pos}=1 のみ。馬単なら 1着={pos}=1 / 2着={pos}=2
+      - click: "[data-position='{pos}'] [data-number='{n}'], .col{pos} input[value='{n}']"   # 要確認
+  - fill: { selector: "input[name='amount'], input.amount", value: "{units}" }   # 単位: 100円   要確認
+  - click: "text=セット"                          # 要確認
+
+# 投票内容の確認画面へ。合計金額が表示と一致しなければ中止
+confirm:
+  - click: "text=投票内容を確認"                   # 要確認
+  - expect_text: "{total_fmt}円"
+  - expect_text: "{points}点"                     # 要確認（表示が無い画面なら削除）
+
+# 最終確定（--live のときだけ実行される）
+submit:
+  - optional:
+      - fill: { selector: "input[type=password]", value: "{pin}" }   # 暗証番号   要確認
+  - click: "text=投票する"                         # 要確認
+  - wait_for: { selector: "text=受け付けました", timeout_sec: 30 }   # 要確認

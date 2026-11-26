@@ -1,0 +1,7 @@
+.venv/
+config.yaml
+my_selectors_rakuten.yaml
+data/
+logs/
+*.egg-info/
+.pytest_cache/

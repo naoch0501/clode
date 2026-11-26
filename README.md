@@ -106,3 +106,7 @@ Style-Bert-VITS2 は公式には NVIDIA (CUDA) 向けです。このリポジト
 - 新しい PyTorch で起きる `torch.load` の `weights_only` エラーを `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` で回避
 - torch / torchaudio は 2.8.0 に固定（2.9 では音声分割に使う silero-vad が動かない）
 - 文字起こしは CUDA 専用の faster-whisper ではなく、Hugging Face 版 Whisper (`--use_hf_whisper`) を使う
+
+---
+
+別プロジェクト: [keiba-autobet/](keiba-autobet/README.md) — 地方競馬（楽天競馬）の条件付き自動投票ツール
