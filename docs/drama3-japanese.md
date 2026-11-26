@@ -98,7 +98,35 @@ powershell -ExecutionPolicy Bypass -File windows\drama3\speak.ps1 -Voice myvoice
 | `-Temperature 0.7` | 小さくすると安定、大きくすると表現豊か（既定 1.0） |
 | `-Device cpu` | GPU を使わない（動作確認用） |
 | `-Gap 0.4` | 段落の間の無音（秒） |
-| `-Extra '--top-p','0.8'` | speech.cpp の他のオプションをそのまま渡す |
+| `-Extra '--top-p 0.8'` | speech.cpp の他のオプションをそのまま渡す |
+
+### セリフの聞き比べ（variants.ps1）
+短いセリフは生成のたびに当たり外れがあるので、文章の書き方・温度・シードを変えたものをまとめて作り、
+一番良いものを選ぶのが近道です。1 行に 1 パターンずつ書いたテキストファイル（UTF-8）を用意します。
+
+```
+ねえ、聞いて！[laughs] 今日すっごくいいことがあったの！
+ねえねえ、聞いて〜！ふふっ…今日ね、すっごくいいことがあったの！
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File windows\drama3\variants.ps1 -TextFile セリフ.txt -Seeds 1-5 -Temperatures 0.8 -Name line
+```
+
+パターン × 温度 × シードの全組み合わせ（この例では 2 × 1 × 5 = 10 本）が `windows\drama3\outputs\line\` に
+`p1_t0.8_s3.wav`（パターン 1・温度 0.8・シード 3）のような名前ででき、終わるとフォルダが開きます。
+`list.txt` にファイル名と設定の一覧が入ります。
+
+| オプション | 内容 |
+|---|---|
+| `-TextFile` / `-Texts "A\|B"` | セリフのパターン（ファイルなら 1 行 1 パターン、`#` で始まる行は無視） |
+| `-Voice` | 声ファイル名（既定 `myvoice`） |
+| `-Seeds 1-5` / `1,3,7` | 試すシード |
+| `-Temperatures 0.7,0.8,0.9` | 試す温度 |
+| `-Name` | 出力フォルダ名（既定は日時） |
+| `-NoOpen` | 終わってもフォルダを開かない |
+
+1 本ごとにモデルを読み込み直すので、本数に比例して時間がかかります。
 
 ### 感情・演技のタグ
 文中に `[laughs]` のようなタグを入れると、その位置で笑い・ため息などの演技をします。
@@ -115,9 +143,11 @@ powershell -ExecutionPolicy Bypass -File windows\drama3\speak.ps1 -Voice myvoice
 | `windows/drama3/install.ps1` | speech.cpp とモデルの導入 |
 | `windows/drama3/make-voice.ps1` | 参照音声 → 声ファイル |
 | `windows/drama3/speak.ps1` | テキスト → wav |
+| `windows/drama3/variants.ps1` | セリフをパターン × 温度 × シードでまとめて生成 |
 | `windows/drama3/common.ps1` | 共通処理（各スクリプトが読み込む） |
 | `windows/drama3/models/` | モデル（git 管理外）。環境変数 `DRAMA3_MODEL_DIR` で場所を変更可、`DRAMA3_MODEL` で .gguf を直接指定可 |
 | `windows/drama3/voices/` | 作った声ファイル（git 管理外） |
+| `windows/drama3/outputs/` | variants.ps1 の出力（git 管理外） |
 
 ## うまくいかないとき
 

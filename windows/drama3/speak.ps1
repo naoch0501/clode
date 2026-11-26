@@ -9,7 +9,7 @@
 
 .PARAMETER Voice  voices\<名前>.voice.gguf の名前（make-voice.ps1 で作成）。none で参照なし
 .PARAMETER File   原稿ファイル（UTF-8）。空行で区切った段落ごとに生成して 1 つの wav に連結する
-.PARAMETER Extra  speech tts にそのまま渡す追加オプション（例: -Extra '--top-p','0.8'）
+.PARAMETER Extra  speech tts にそのまま渡す追加オプション（例: -Extra '--top-p 0.8'）
 #>
 param(
   [string]$Text,
@@ -40,11 +40,13 @@ if ($Voice -eq 'none') {
 if ($null -ne $Seed) { $common += @('--seed', "$Seed") }
 if ($null -ne $Temperature) { $common += @('--temperature', ([string]$Temperature)) }
 if ($Device) { $common += @('--device', $Device) }
-$common += $Extra
+# -Extra は  '--top-p','0.8'  /  '--top-p 0.8'  /  '--top-p,0.8'  のどれで渡しても分けて speech に渡す
+# （powershell -File 経由だと配列が 1 つの文字列 "--top-p,0.8" になるため）
+foreach ($e in $Extra) { $common += @($e -split '[,\s]+' | Where-Object { $_ }) }
 
 # 1 回の生成は最大 ~47 秒なので、空行区切りの段落ごとに分けて生成する
 $parts = @(($Text -replace "`r", '') -split "\n\s*\n" | ForEach-Object { ($_ -replace '\s*\n\s*', '').Trim() } | Where-Object { $_ })
-$OutFull = [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $Out))
+$OutFull = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine((Get-Location).Path, $Out))
 
 if ($parts.Count -eq 1) {
   Invoke-Speech -Arguments (@('tts', $model) + $common + @('-o', $OutFull, $parts[0]))

@@ -16,4 +16,5 @@ __pycache__/
 # Drama-3-Japanese（windows/drama3/install.ps1 がダウンロード）
 windows/drama3/models/
 windows/drama3/voices/
+windows/drama3/outputs/
 *.gguf
