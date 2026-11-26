@@ -152,6 +152,28 @@ python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot
 似すぎて崩れる・絵が固い → 強さを下げる(`--lora meto_oc:0.6`)か、早いエポックを使う。
 似ない → 強さを上げる、エポックを増やす(`--epochs 14`)、学習画像を増やす。
 
+## 5b. 画風 LoRA を作る
+
+キャラクターとは別に「絵柄」だけを覚えさせる LoRA です。キャラ LoRA と重ねて使えます。
+
+1. `styles/example/` をコピーして `styles/<名前>/` を作り、`style.yaml` を書く
+   - `source:` は必須。`own`(自分で描いた/自分で生成した画像)か `permitted`(作者から学習の許可を得た画像)
+   - 他人の絵を許可なく集めて、その人の画風をまねる LoRA は作れません
+2. `styles/<名前>/train/` に **同じ絵柄の画像を 30〜100 枚** 置く(キャラはばらばらでよい)
+3. 学習データを作って学習する(ComfyUI は止めておく)
+   ```bash
+   python -m illustgen lora-prep --style styles/<名前>
+   python -m illustgen lora-train --style styles/<名前>
+   ```
+   キャラ LoRA と違い、髪・目などのタグは消さずに残します(トリガーワードに絵柄だけを覚えさせるため)。
+4. 使う(キャラ LoRA に重ねる)
+   ```bash
+   python -m illustgen generate -c characters/meto -s "..." --no-reference --style <名前>
+   python -m illustgen generate -c characters/meto -s "..." --no-reference --style <名前> --style-strength 0.5
+   python -m illustgen generate -c characters/meto -s "..." --no-reference --style <名前> --style-file <トリガー>-000006
+   ```
+   画風が強すぎてキャラが崩れる → `--style-strength` を下げる。キャラ LoRA の強さ(character.yaml)とのバランスで調整します。
+
 ## 6. 画像の一部だけ直す(インペイント)
 
 ComfyUI の画面で使うワークフローを用意しています(illustgen の安全チェックは通らないので、

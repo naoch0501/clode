@@ -42,5 +42,7 @@ class Character:
         )
 
     def prompt_fragment(self) -> str:
-        trigger = self.trigger if self.lora else ""
-        return ", ".join(p for p in (trigger, self.appearance, self.outfit) if p)
+        own = self.trigger and any(not e.get("trigger") for e in self.lora)
+        triggers = [self.trigger] if own else []
+        triggers += [str(e["trigger"]) for e in self.lora if e.get("trigger")]
+        return ", ".join(p for p in (*triggers, self.appearance, self.outfit) if p)

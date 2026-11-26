@@ -239,3 +239,77 @@ def test_trigger_and_lora_override_in_generate(tmp_path):
     assert wf["lora_0"]["inputs"]["lora_name"] == "meto_oc-000006.safetensors"
     assert wf["lora_0"]["inputs"]["strength_model"] == 0.9
     assert "11" not in wf  # 参考画像なし → txt2img
+
+
+# --- 画風 LoRA -------------------------------------------------------------------
+def write_style(d: Path, **over) -> Path:
+    data = {"name": "S", "source": "own", "trigger": "my_style", "strength": 0.6}
+    data.update(over)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "style.yaml").write_text(json.dumps(data), encoding="utf-8")
+    return d
+
+
+def test_style_requires_source(tmp_path):
+    lora.check_style(lora.Style.load(write_style(tmp_path / "ok")))
+    lora.check_style(lora.Style.load(write_style(tmp_path / "perm", source="permitted")))
+    with pytest.raises(safety.SafetyError, match="own"):
+        lora.check_style(lora.Style.load(write_style(tmp_path / "bad", source="artist_x")))
+    with pytest.raises(safety.SafetyError):
+        lora.check_style(lora.Style.load(write_style(tmp_path / "bad2", source="")))
+
+
+def test_prepare_style_keeps_all_tags(tmp_path):
+    d = write_style(tmp_path / "s")
+    (d / "train").mkdir()
+    png(d / "train" / "a.png")
+    out = lora.prepare_style(d, lora.Style.load(d), "my_style",
+                             tagger=fake_tagger(["1girl", "red hair", "blue eyes", "smile"]))
+    assert (out / "001.txt").read_text() == "my_style, 1girl, red hair, blue eyes, smile"
+    with pytest.raises(safety.SafetyError):
+        lora.prepare_style(d, lora.Style.load(d), "my_style", tagger=fake_tagger(["photo (medium)"]))
+
+
+def test_generate_with_style(tmp_path):
+    server = HTTPServer(("127.0.0.1", 0), FakeComfy)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    cfg = __import__("yaml").safe_load((ROOT / "config.example.yaml").read_text())
+    cfg["comfyui"]["url"] = f"http://127.0.0.1:{server.server_port}"
+    cfg["output_dir"] = str(tmp_path / "out")
+    cfg["audit_log"] = str(tmp_path / "out/audit.jsonl")
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(json.dumps(cfg))
+    char = write_char(tmp_path / "chars/meto", trigger="meto_oc", lora=[{"name": "meto_oc-000008.safetensors"}])
+    style = write_style(tmp_path / "styles/pastel")
+    try:
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile", "--no-reference",
+              "--style", str(style)])
+    finally:
+        server.shutdown()
+    wf = FakeComfy.received["prompt"]
+    text = wf["6"]["inputs"]["text"]
+    assert "meto_oc" in text and "my_style" in text
+    assert wf["lora_0"]["inputs"]["lora_name"] == "meto_oc-000008.safetensors"
+    assert wf["lora_1"]["inputs"]["lora_name"] == "my_style.safetensors"
+    assert wf["lora_1"]["inputs"]["strength_model"] == 0.6
+
+
+def test_style_only_does_not_add_character_trigger():
+    c = Character(name="t", age=25, declared_original=True, trigger="meto_oc",
+                  lora=[{"name": "s.safetensors", "trigger": "my_style"}])
+    assert c.prompt_fragment().startswith("my_style")
+    assert "meto_oc" not in c.prompt_fragment()
+
+
+def test_lora_train_style_dry_run(tmp_path, capsys):
+    d = write_style(tmp_path / "styles/pastel")
+    (d / "lora" / "dataset").mkdir(parents=True)
+    for i in range(40):
+        png(d / "lora" / "dataset" / f"{i:03d}.png")
+    base = tmp_path / "base.safetensors"
+    base.write_bytes(b"")
+    main(["--config", str(ROOT / "config.example.yaml"), "lora-train", "--style", str(d),
+          "--base", str(base), "--dry-run"])
+    out = capsys.readouterr().out
+    assert "40 枚 × 5 回 × 10 エポック = 2000 ステップ" in out
+    assert "--output_name my_style" in out

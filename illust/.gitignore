@@ -6,3 +6,6 @@ characters/*/
 *.jpg
 *.jpeg
 *.webp
+
+styles/*/
+!styles/example/

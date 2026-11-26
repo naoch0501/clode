@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import csv
 import re
+from dataclasses import dataclass
 import shlex
 import subprocess
 import sys
 from pathlib import Path
 
+import yaml
 from PIL import Image
 
 from . import safety
@@ -95,17 +97,60 @@ def build_caption(trigger: str, tags: list[str], char: Character) -> str:
     return ", ".join([trigger, *kept])
 
 
-def prepare(char_dir: Path, char: Character, trigger: str, tagger=None) -> Path:
-    safety.check_character(char)
-    src = char_dir / "train"
+@dataclass
+class Style:
+    name: str
+    declared_source: str
+    trigger: str = ""
+    strength: float = 0.7
+    note: str = ""
+
+    @classmethod
+    def load(cls, path: str | Path) -> "Style":
+        path = Path(path)
+        if path.is_dir():
+            path = path / "style.yaml"
+        if not path.exists():
+            raise safety.SafetyError(f"{path} がありません。styles/example/style.yaml をコピーして作ってください。")
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return cls(
+            name=str(data.get("name", path.parent.name)),
+            declared_source=str(data.get("source", "")),
+            trigger=str(data.get("trigger") or ""),
+            strength=float(data.get("strength", 0.7)),
+            note=str(data.get("note", "")),
+        )
+
+
+STYLE_SOURCES = {"own", "permitted"}
+
+
+def check_style(style: Style) -> None:
+    if style.declared_source not in STYLE_SOURCES:
+        raise safety.SafetyError(
+            f"画風 '{style.name}': source に own（自分で描いた／自分で生成した画像）または "
+            "permitted（学習に使う許可を得た画像）を書いてください。"
+            "他人の絵を許可なく集めて、その人の画風をまねる LoRA は作れません。"
+        )
+    for field in ("name", "trigger", "note"):
+        safety.check_prompt(getattr(style, field) or "", f"画風 '{style.name}' の {field}")
+
+
+def default_style_trigger(style_dir: Path) -> str:
+    base = re.sub(r"[^a-z0-9]", "", style_dir.name.lower()) or "my"
+    return f"{base}_style"
+
+
+def _prepare(base_dir: Path, caption, tagger, hint: str) -> Path:
+    src = base_dir / "train"
     if not src.is_dir() or not list_images(src):
-        raise safety.SafetyError(f"{src}/ に学習用の画像を置いてください（15〜30 枚が目安）。")
+        raise safety.SafetyError(f"{src}/ に学習用の画像を置いてください（{hint}）。")
     images = list_images(src)
     for p in images:
         safety.check_reference_image(p)
 
     tagger = tagger or WDTagger()
-    out = char_dir / "lora" / "dataset"
+    out = base_dir / "lora" / "dataset"
     out.mkdir(parents=True, exist_ok=True)
     for old in out.iterdir():
         old.unlink()
@@ -121,8 +166,9 @@ def prepare(char_dir: Path, char: Character, trigger: str, tagger=None) -> Path:
             continue
         stem = f"{i:03d}"
         rgb.save(out / f"{stem}.png")
-        (out / f"{stem}.txt").write_text(build_caption(trigger, tags, char), encoding="utf-8")
-        print(f"  {p.name} → {stem}.txt: {(out / f'{stem}.txt').read_text(encoding='utf-8')[:120]}")
+        text = caption(tags)
+        (out / f"{stem}.txt").write_text(text, encoding="utf-8")
+        print(f"  {p.name} → {stem}.txt: {text[:120]}")
     if problems:
         for f in out.iterdir():
             f.unlink()
@@ -131,6 +177,18 @@ def prepare(char_dir: Path, char: Character, trigger: str, tagger=None) -> Path:
             + "\n  ".join(problems)
         )
     return out
+
+
+def prepare(char_dir: Path, char: Character, trigger: str, tagger=None) -> Path:
+    """キャラクター LoRA 用。キャラ固有の特徴タグは外してトリガーワードに覚えさせる。"""
+    safety.check_character(char)
+    return _prepare(char_dir, lambda tags: build_caption(trigger, tags, char), tagger, "15〜30 枚が目安")
+
+
+def prepare_style(style_dir: Path, style: Style, trigger: str, tagger=None) -> Path:
+    """画風 LoRA 用。内容のタグはすべて残し、トリガーワードには絵柄だけを覚えさせる。"""
+    check_style(style)
+    return _prepare(style_dir, lambda tags: ", ".join([trigger, *tags]), tagger, "同じ絵柄の画像を 30〜100 枚")
 
 
 # --- 学習 ----------------------------------------------------------------------

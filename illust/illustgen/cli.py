@@ -76,6 +76,16 @@ def cmd_generate(args, cfg) -> None:
             if not name.endswith(".safetensors"):
                 name += ".safetensors"
             char.lora.append({"name": name, "strength": float(strength or 0.8)})
+    if args.style:
+        sd = resolve_style_dir(args.style)
+        style = lora.Style.load(sd)
+        lora.check_style(style)
+        trig = style.trigger or lora.default_style_trigger(sd)
+        fname = args.style_file or trig
+        if not fname.endswith(".safetensors"):
+            fname += ".safetensors"
+        strength = args.style_strength if args.style_strength is not None else style.strength
+        char.lora = [*char.lora, {"name": fname, "strength": strength, "trigger": trig}]
     if args.no_outfit:
         char.outfit = ""
     elif args.outfit is not None:
@@ -117,18 +127,41 @@ def cmd_generate(args, cfg) -> None:
         })
 
 
+def resolve_style_dir(spec: str) -> Path:
+    p = Path(spec)
+    if not p.exists() and (ROOT / "styles" / spec).exists():
+        p = ROOT / "styles" / spec
+    return p.resolve()
+
+
+def lora_target(args):
+    """(フォルダ, トリガーワード, 表示名, 再実行用の引数, 画風かどうか)"""
+    if args.style:
+        d = resolve_style_dir(args.style)
+        style = lora.Style.load(d)
+        lora.check_style(style)
+        return d, style.trigger or lora.default_style_trigger(d), f"--style {args.style}", True
+    d = Path(args.character).resolve()
+    char = Character.load(d)
+    safety.check_character(char)
+    return d, char.trigger or lora.default_trigger(d), f"-c {args.character}", False
+
+
 def cmd_lora_prep(args, cfg) -> None:
-    char_dir = Path(args.character).resolve()
-    char = Character.load(char_dir)
-    trigger = char.trigger or lora.default_trigger(char_dir)
-    print(f"==> 学習データを準備: トリガーワード「{trigger}」")
-    out = lora.prepare(char_dir, char, trigger)
+    d, trigger, again, is_style = lora_target(args)
+    kind = "画風" if is_style else "キャラクター"
+    print(f"==> {kind} LoRA の学習データを準備: トリガーワード「{trigger}」")
+    if is_style:
+        out = lora.prepare_style(d, lora.Style.load(d), trigger)
+    else:
+        out = lora.prepare(d, Character.load(d), trigger)
     n = len(list(out.glob("*.png")))
     print(f"\n完了: {n} 枚 → {out}")
     print("  .txt を開いてタグを確認できます（間違ったタグは消してよい）。")
-    if not char.trigger:
-        print(f"  character.yaml に次の 1 行を追加してください:  trigger: {trigger}")
-    print(f"  次:  python -m illustgen lora-train -c {args.character}")
+    yaml_name = "style.yaml" if is_style else "character.yaml"
+    if (is_style and not lora.Style.load(d).trigger) or (not is_style and not Character.load(d).trigger):
+        print(f"  {yaml_name} に次の 1 行を追加してください:  trigger: {trigger}")
+    print(f"  次:  python -m illustgen lora-train {again}")
 
 
 def free_comfyui(cfg) -> None:
@@ -141,25 +174,21 @@ def free_comfyui(cfg) -> None:
 
 
 def cmd_lora_train(args, cfg) -> None:
-    char_dir = Path(args.character).resolve()
-    char = Character.load(char_dir)
-    safety.check_character(char)
-    trigger = char.trigger or lora.default_trigger(char_dir)
+    char_dir, trigger, again, is_style = lora_target(args)
     dataset = char_dir / "lora" / "dataset"
     images = list(dataset.glob("*.png")) if dataset.is_dir() else []
     if not images:
-        sys.exit(f"学習データがありません。先に  python -m illustgen lora-prep -c {args.character}")
+        sys.exit(f"学習データがありません。先に  python -m illustgen lora-prep {again}")
 
     repo_root = ROOT.parent
     comfy_models = repo_root / "ComfyUI" / "models"
     base = Path(args.base) if args.base else comfy_models / "checkpoints" / cfg["defaults"]["checkpoint"]
     if not base.exists():
         sys.exit(f"学習の元にするモデルがありません: {base}")
-    repeats = args.repeats or lora.auto_repeats(len(images), args.epochs)
+    repeats = args.repeats or lora.auto_repeats(len(images), args.epochs, 2000 if is_style else 1600)
     toml_path = char_dir / "lora" / "dataset.toml"
     toml_path.write_text(lora.dataset_toml(dataset, repeats), encoding="utf-8")
     out_dir = comfy_models / "loras"
-    out_dir.mkdir(parents=True, exist_ok=True)
     cmd = lora.train_command(repo_root, base, toml_path, out_dir, trigger, args.epochs, args.dim, args.lr,
                              char_dir / "lora" / "logs")
     steps = len(images) * repeats * args.epochs
@@ -168,10 +197,21 @@ def cmd_lora_train(args, cfg) -> None:
     if args.dry_run:
         print(" ".join(cmd))
         return
+    out_dir.mkdir(parents=True, exist_ok=True)
     free_comfyui(cfg)
     code = lora.run_training(repo_root, cmd)
     if code != 0:
         sys.exit(f"学習が失敗しました (終了コード {code})。上のエラーを確認してください。")
+    if is_style:
+        print(f"""
+完了。2 エポックごとの途中経過も {out_dir}/ に保存されています（{trigger}-000002.safetensors など）。
+style.yaml に trigger: {trigger} があることを確認して、次のように使います:
+
+  python -m illustgen generate -c characters/meto -s "..." --no-reference --style {args.style}
+  # 途中経過と比べる
+  python -m illustgen generate -c characters/meto -s "..." --no-reference --style {args.style} --style-file {trigger}-000006
+""")
+        return
     print(f"""
 完了。2 エポックごとの途中経過も {out_dir}/ に保存されています（{trigger}-000002.safetensors など）。
 character.yaml に次を書くと、generate で自動的に使われます:
@@ -181,7 +221,7 @@ lora:
   - name: {trigger}.safetensors
     strength: 0.8
 
-途中経過と比べるには:  python -m illustgen generate -c {args.character} -s "..." --no-reference --lora {trigger}-000006
+途中経過と比べるには:  python -m illustgen generate {again} -s "..." --no-reference --lora {trigger}-000006
 """)
 
 
@@ -209,6 +249,9 @@ def main(argv=None) -> None:
     p.add_argument("--start-at", dest="reference_start_at", type=float,
                    help="参考画像を効かせ始めるタイミング 0.0-1.0（上げると色の濁りが減る）")
     p.add_argument("--end-at", dest="reference_end_at", type=float, help="参考画像を効かせ終わるタイミング 0.0-1.0")
+    p.add_argument("--style", help="画風 LoRA を重ねる（styles/<名前> または フォルダのパス）")
+    p.add_argument("--style-strength", type=float, help="画風 LoRA の強さ（省略時は style.yaml の strength）")
+    p.add_argument("--style-file", help="画風 LoRA のファイル名（途中経過と比べるとき。例: mystyle_style-000006）")
     p.add_argument("--outfit", help="この回だけ服装タグを差し替える（character.yaml の outfit の代わり）")
     p.add_argument("--no-outfit", action="store_true", help="この回は服装タグを入れない")
     p.add_argument("--lora", action="append", metavar="名前[:強さ]",
@@ -222,11 +265,15 @@ def main(argv=None) -> None:
     p.set_defaults(func=cmd_generate)
 
     p = sub.add_parser("lora-prep", help="LoRA 学習データを準備する（train/ の画像に自動でタグ付け）")
-    p.add_argument("-c", "--character", required=True)
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("-c", "--character", help="キャラクター LoRA: characters/<名前>")
+    g.add_argument("--style", help="画風 LoRA: styles/<名前>")
     p.set_defaults(func=cmd_lora_prep)
 
-    p = sub.add_parser("lora-train", help="キャラクター LoRA を学習する")
-    p.add_argument("-c", "--character", required=True)
+    p = sub.add_parser("lora-train", help="キャラクター / 画風 LoRA を学習する")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("-c", "--character", help="キャラクター LoRA: characters/<名前>")
+    g.add_argument("--style", help="画風 LoRA: styles/<名前>")
     p.add_argument("--epochs", type=int, default=10)
     p.add_argument("--repeats", type=int, help="1 エポックで各画像を何回使うか（省略時は自動）")
     p.add_argument("--dim", type=int, default=16, help="LoRA の大きさ (network_dim)")

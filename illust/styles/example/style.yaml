@@ -1,0 +1,12 @@
+# 画風 LoRA の定義。1画風1フォルダ。学習画像は train/ に置く（同じ絵柄の画像を 30〜100 枚）。
+name: Example style (サンプル)
+# 学習画像の出どころ（必須）
+#   own:       自分で描いた絵、または自分で生成した画像
+#   permitted: 作者から学習に使う許可を得た画像
+# 他人の絵を許可なく集めて、その人の画風をまねる LoRA は作れません。
+source: own
+# トリガーワード（省略時は <フォルダ名>_style）
+trigger: example_style
+# generate --style で使うときの既定の強さ
+strength: 0.7
+note: 太めの線、パステル調の塗り（メモ用）
