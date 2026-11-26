@@ -157,6 +157,8 @@ NODES="${COMFY_DIR}/custom_nodes"
 echo "==> ComfyUI_IPAdapter_plus を取得"
 clone_or_update https://github.com/cubiq/ComfyUI_IPAdapter_plus.git "${NODES}/ComfyUI_IPAdapter_plus" main
 install_requirements "${NODES}/ComfyUI_IPAdapter_plus/requirements.txt"
+echo "==> ComfyUI-Inpaint-CropAndStitch を取得（インペイントを塗った周りだけで計算する）"
+clone_or_update https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch.git "${NODES}/ComfyUI-Inpaint-CropAndStitch" main
 if [[ "${WITH_MANAGER}" == "1" ]]; then
   echo "==> ComfyUI-Manager を取得"
   clone_or_update https://github.com/Comfy-Org/ComfyUI-Manager.git "${NODES}/ComfyUI-Manager" main

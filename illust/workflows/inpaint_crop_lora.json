@@ -1,0 +1,200 @@
+{
+  "4": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "WAI-Nsfw-Illustrious-17.safetensors"
+    },
+    "_meta": {
+      "title": "モデル"
+    }
+  },
+  "10": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "edit_me.png"
+    },
+    "_meta": {
+      "title": "直したい画像（右クリック→マスクエディタで塗る）"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "masterpiece, best quality, amazing quality, adult, mature, meto_oc, 1girl, solo, adult woman, mature female, (ここに直したい内容のタグを書く)",
+      "clip": [
+        "20",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "直したあとの内容（Positive）"
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "child, loli, shota, minor, underage, teen, young, aged down, flat chest, school uniform, photo, photorealistic, realistic, real person, bad quality, worst quality, lowres, bad anatomy, bad hands, watermark",
+      "clip": [
+        "20",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "11": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "15",
+        1
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    }
+  },
+  "12": {
+    "class_type": "SetLatentNoiseMask",
+    "inputs": {
+      "samples": [
+        "11",
+        0
+      ],
+      "mask": [
+        "15",
+        2
+      ]
+    }
+  },
+  "3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 1,
+      "steps": 28,
+      "cfg": 5.5,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "normal",
+      "denoise": 0.6,
+      "model": [
+        "20",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "latent_image": [
+        "12",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "生成（denoise: 0.4-0.6 軽く直す / 0.7-1.0 大きく変える）"
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "inpaint_crop",
+      "images": [
+        "16",
+        0
+      ]
+    }
+  },
+  "20": {
+    "class_type": "LoraLoader",
+    "inputs": {
+      "lora_name": "meto_oc-000008.safetensors",
+      "strength_model": 0.8,
+      "strength_clip": 0.8,
+      "model": [
+        "4",
+        0
+      ],
+      "clip": [
+        "4",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "キャラ LoRA"
+    }
+  },
+  "15": {
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "塗った周りだけ切り出す（1024x1024 で描き直す）"
+    },
+    "inputs": {
+      "image": [
+        "10",
+        0
+      ],
+      "mask": [
+        "10",
+        1
+      ],
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": true,
+      "mask_expand_pixels": 8,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1.0,
+      "extend_down_factor": 1.0,
+      "extend_left_factor": 1.0,
+      "extend_right_factor": 1.0,
+      "context_from_mask_extend_factor": 1.5,
+      "output_resize_to_target_size": true,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "32",
+      "device_mode": "cpu (compatible)"
+    }
+  },
+  "16": {
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "元の画像に貼り戻す"
+    },
+    "inputs": {
+      "stitcher": [
+        "15",
+        0
+      ],
+      "inpainted_image": [
+        "8",
+        0
+      ]
+    }
+  }
+}

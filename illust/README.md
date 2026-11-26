@@ -165,6 +165,11 @@ ComfyUI の画面で使うワークフローを用意しています(illustgen �
 
 塗った部分以外は元の画像のまま残ります。結果は `ComfyUI/output/inpaint_*.png` です。
 
+**大きい画像で時間がかかる場合**は `inpaint_crop.json` / `inpaint_crop_lora.json` を使います。
+塗った周りだけを 1024×1024 に切り出して描き直し、元の解像度のまま貼り戻すので速く、細部もきれいになります
+(カスタムノード ComfyUI-Inpaint-CropAndStitch が必要。`scripts/03_install_comfyui.sh` を再実行すると入ります)。
+「切り出す」ノードの `context_from_mask_extend_factor`(既定 1.5)を上げると、周りの状況をより多く見て描きます。
+
 ## ファイル構成
 
 | パス | 内容 |
@@ -176,6 +181,7 @@ ComfyUI の画面で使うワークフローを用意しています(illustgen �
 | `illustgen/providers/comfyui.py` | ComfyUI API クライアント、LoRA の自動挿入 |
 | `workflows/sdxl_ipadapter.json` | 参考画像あり(IP-Adapter)のワークフロー |
 | `workflows/inpaint.json` / `inpaint_lora.json` | ComfyUI の画面で使うインペイント用(LoRA なし / あり) |
+| `workflows/inpaint_crop.json` / `inpaint_crop_lora.json` | 塗った周りだけ切り出して描き直すインペイント(大きい画像向け) |
 | `workflows/sdxl_txt2img.json` | 参考画像なしのワークフロー |
 | `tests/` | `python -m pytest tests` |
 
