@@ -86,6 +86,20 @@ WebUI の「データセット作成」で文字起こしをする場合は、**
 エディタではアクセントの調整やユーザー辞書の登録ができます。WebUI の「スタイル作成」で、
 喜び・怒りなどの話し方ごとのスタイルを作れます（素材にそういう話し方が含まれている場合）。
 
+## 別エンジン: Drama-3-Japanese（Windows、学習不要）
+
+[Aratako/Drama-3-Japanese](https://huggingface.co/Aratako/Drama-3-Japanese) は、短い参照音声 1 本から声をまねて
+感情豊かに読み上げる大規模 TTS です。学習が要らないかわりにモデルが大きく（約 21GB の量子化版）、
+WSL ではなく **Windows 上で speech.cpp（Vulkan）** を使って動かします。RAM 32GB 以上推奨。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File windows\drama3\install.ps1
+powershell -ExecutionPolicy Bypass -File windows\drama3\make-voice.ps1 -Wav ref.wav -Transcript "参照音声の発話内容" -Name myvoice
+powershell -ExecutionPolicy Bypass -File windows\drama3\speak.ps1 -Voice myvoice -Text "こんにちは。" -Out hello.wav
+```
+
+詳しくは [docs/drama3-japanese.md](docs/drama3-japanese.md) を参照してください。
+
 ## ファイル構成
 
 | パス | 内容 |
@@ -98,6 +112,7 @@ WebUI の「データセット作成」で文字起こしをする場合は、**
 | `scripts/speak.py` | テキスト → wav |
 | `inputs/<名前>/` | 録音ファイル置き場（git 管理外） |
 | `Style-Bert-VITS2/` | 本体（02 で clone、git 管理外）。学習データは `Data/`、完成モデルは `model_assets/` |
+| `windows/drama3/` | Drama-3-Japanese 用の PowerShell スクリプト（Windows で実行）。モデル・声ファイルは git 管理外 |
 
 ## 補足: AMD GPU で動かすための工夫
 Style-Bert-VITS2 は公式には NVIDIA (CUDA) 向けです。このリポジトリでは次の対応をしています。

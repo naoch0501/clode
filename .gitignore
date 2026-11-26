@@ -12,3 +12,8 @@ inputs/
 *.opus
 
 __pycache__/
+
+# Drama-3-Japanese（windows/drama3/install.ps1 がダウンロード）
+windows/drama3/models/
+windows/drama3/voices/
+*.gguf
