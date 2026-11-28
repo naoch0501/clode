@@ -261,7 +261,7 @@ def cmd_duo(args, cfg) -> None:
     region_b = join("1girl", tags(b), extra_b)
     refine_a = join(head, own_trigger(a), "1girl", tags(a), args.scene, extra_a)
     refine_b = join(head, own_trigger(b), "1girl", tags(b), args.scene, extra_b)
-    negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), char.negative,
+    negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), a.negative, b.negative,
                     args.negative or "")
 
     pair = f"{Path(spec_a).name}_{Path(spec_b).name}"
