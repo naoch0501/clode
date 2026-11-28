@@ -95,6 +95,8 @@ def cmd_generate(args, cfg) -> None:
         char.outfit = args.outfit
     positive = join(d["quality_positive"], rating.get("positive", ""), safety.FORCED_POSITIVE,
                     char.prompt_fragment(), args.scene)
+    if has_other_people(args.scene):
+        positive = drop_solo(positive)
     negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), args.negative or "")
 
     refs = char.reference_images[:1] if not args.no_reference else []
@@ -130,6 +132,21 @@ def cmd_generate(args, cfg) -> None:
         })
     write_run_note(out_dir, args, char, positive, negative, d, workflow, seed)
     print(f"\nフォルダ: {out_dir}")
+
+
+OTHER_PEOPLE = re.compile(r"(?<![a-z])(\d+boys?|\d+girls|1other|hetero|yuri|multiple (boys|girls)|group sex|threesome)(?![a-z])", re.I)
+
+
+def has_other_people(scene: str) -> bool:
+    """シーンに男性や複数人の指定があるか（あれば character.yaml の solo を外す）。"""
+    return bool(OTHER_PEOPLE.search(scene or ""))
+
+
+def drop_solo(prompt: str) -> str:
+    """「solo」（強さ付きも含む）だけを外す。「solo focus」は残す。"""
+    tags = [t.strip() for t in prompt.split(",")]
+    kept = [t for t in tags if re.sub(r"[()]|:[0-9.]+", "", t).strip().lower() != "solo"]
+    return ", ".join(kept)
 
 
 def run_folder_name(name: str | None, scene: str, rating: str) -> str:

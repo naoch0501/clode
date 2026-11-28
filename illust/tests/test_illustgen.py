@@ -342,3 +342,12 @@ def test_run_folder_name():
     assert run_folder_name("テスト/1", "x", "general").endswith("_テスト-1")
     assert run_folder_name(None, "(from above:1.3), pov, 1boy, fellatio", "r18").endswith("_r18_from above_pov_1boy_fellatio".replace(" ", "-"))
     assert run_folder_name(None, "", "general").endswith("_run")
+
+
+def test_solo_removed_when_scene_has_other_people():
+    from illustgen.cli import drop_solo, has_other_people
+    assert has_other_people("(1boy:1.2), hetero, fellatio")
+    assert has_other_people("2girls, hug")
+    assert not has_other_people("solo, standing, smile")
+    assert not has_other_people("1girl, smile")
+    assert drop_solo("1girl, solo, (solo:1.2), solo focus, smile") == "1girl, solo focus, smile"
