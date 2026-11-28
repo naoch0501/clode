@@ -18,3 +18,8 @@ reference_weight: 0.7
 lora: []
 #  - name: example_char.safetensors
 #    strength: 0.8
+
+# このキャラでいつも使う画風と強さ、CFG（省略可。コマンドの --style / --style-strength / --cfg が優先）
+# style: styles/mystyle
+# style_strength: 0.6
+# cfg: 4.5

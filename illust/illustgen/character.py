@@ -49,6 +49,9 @@ class Character:
     reference_images: list[Path] = field(default_factory=list)
     reference_weight: float = 0.7
     trigger: str = ""
+    style: str = ""                    # 既定で重ねる画風（例: styles/mystyle）
+    style_strength: float | None = None  # その画風の強さ（style.yaml より優先）
+    cfg: float | None = None             # このキャラの CFG（config.yaml より優先）
 
     @classmethod
     def load(cls, path: str | Path) -> "Character":
@@ -70,6 +73,9 @@ class Character:
             reference_images=refs,
             reference_weight=float(data.get("reference_weight", 0.7)),
             trigger=str(data.get("trigger") or ""),
+            style=str(data.get("style") or ""),
+            style_strength=float(data["style_strength"]) if data.get("style_strength") is not None else None,
+            cfg=float(data["cfg"]) if data.get("cfg") is not None else None,
         )
 
     def prompt_fragment(self) -> str:

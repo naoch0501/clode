@@ -351,3 +351,31 @@ def test_solo_removed_when_scene_has_other_people():
     assert not has_other_people("solo, standing, smile")
     assert not has_other_people("1girl, smile")
     assert drop_solo("1girl, solo, (solo:1.2), solo focus, smile") == "1girl, solo focus, smile"
+
+
+def test_character_default_style_and_cfg(tmp_path):
+    server = HTTPServer(("127.0.0.1", 0), FakeComfy)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    cfg = __import__("yaml").safe_load((ROOT / "config.example.yaml").read_text())
+    cfg["comfyui"]["url"] = f"http://127.0.0.1:{server.server_port}"
+    cfg["output_dir"] = str(tmp_path / "out")
+    cfg["audit_log"] = str(tmp_path / "out/audit.jsonl")
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(json.dumps(cfg))
+    style = write_style(tmp_path / "styles/pastel")
+    char = write_char(tmp_path / "chars/meto", trigger="meto_oc", lora=[{"name": "meto_oc.safetensors", "strength": 0.9}],
+                      style=str(style), style_strength=0.4, cfg=4.5, reference_images=[])
+    try:
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile"])
+        wf = FakeComfy.received["prompt"]
+        assert wf["3"]["inputs"]["cfg"] == 4.5
+        assert wf["lora_1"]["inputs"]["lora_name"] == "my_style.safetensors"
+        assert wf["lora_1"]["inputs"]["strength_model"] == 0.4
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile", "--style-strength", "0.7", "--cfg", "5"])
+        wf = FakeComfy.received["prompt"]
+        assert wf["lora_1"]["inputs"]["strength_model"] == 0.7 and wf["3"]["inputs"]["cfg"] == 5.0
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile", "--no-style"])
+        wf = FakeComfy.received["prompt"]
+        assert "lora_1" not in wf
+    finally:
+        server.shutdown()

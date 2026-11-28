@@ -178,6 +178,13 @@ python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot
    python -m illustgen generate -c characters/meto -s "..." --no-reference --style <名前> --style-file <トリガー>-000006
    ```
    画風が強すぎてキャラが崩れる → `--style-strength` を下げる。キャラ LoRA の強さ(character.yaml)とのバランスで調整します。
+5. キャラごとの既定にする(`character.yaml` に書くと、`--style` などを毎回付けなくてよい)
+   ```yaml
+   style: styles/<名前>
+   style_strength: 0.4
+   cfg: 4.5
+   ```
+   コマンドの `--style` / `--style-strength` / `--cfg` が優先されます。画風なしで描くときは `--no-style`。
 
 ## 6. 画像の一部だけ直す(インペイント)
 

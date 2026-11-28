@@ -66,6 +66,8 @@ def cmd_generate(args, cfg) -> None:
     validate(char, args.scene, args.negative or "")
 
     d = {"reference_start_at": 0.0, "reference_end_at": 0.8, **cfg["defaults"]}
+    if char.cfg is not None:
+        d["cfg"] = char.cfg
     for key in ("width", "height", "steps", "cfg", "checkpoint", "reference_start_at", "reference_end_at"):
         if getattr(args, key) is not None:
             d[key] = getattr(args, key)
@@ -78,15 +80,21 @@ def cmd_generate(args, cfg) -> None:
             if not name.endswith(".safetensors"):
                 name += ".safetensors"
             char.lora.append({"name": name, "strength": float(strength or 0.8)})
-    if args.style:
-        sd = resolve_style_dir(args.style)
+    style_spec = None if args.no_style else (args.style or char.style or None)
+    if style_spec:
+        sd = resolve_style_dir(style_spec)
         style = lora.Style.load(sd)
         lora.check_style(style)
         trig = style.trigger or lora.default_style_trigger(sd)
         fname = args.style_file or trig
         if not fname.endswith(".safetensors"):
             fname += ".safetensors"
-        strength = args.style_strength if args.style_strength is not None else style.strength
+        if args.style_strength is not None:
+            strength = args.style_strength
+        elif char.style_strength is not None and (not args.style or resolve_style_dir(args.style) == resolve_style_dir(char.style)):
+            strength = char.style_strength
+        else:
+            strength = style.strength
         char.lora = [*char.lora, {"name": fname, "strength": strength, "trigger": trig}]
     if args.no_outfit:
         char.outfit = ""
@@ -312,6 +320,7 @@ def main(argv=None) -> None:
                    help="参考画像を効かせ始めるタイミング 0.0-1.0（上げると色の濁りが減る）")
     p.add_argument("--end-at", dest="reference_end_at", type=float, help="参考画像を効かせ終わるタイミング 0.0-1.0")
     p.add_argument("--style", help="画風 LoRA を重ねる（styles/<名前> または フォルダのパス）")
+    p.add_argument("--no-style", action="store_true", help="character.yaml の style を使わない（画風なしで描く）")
     p.add_argument("--style-strength", type=float, help="画風 LoRA の強さ（省略時は style.yaml の strength）")
     p.add_argument("--style-file", help="画風 LoRA のファイル名（途中経過と比べるとき。例: mystyle_style-000006）")
     p.add_argument("--outfit", help="この回だけ服装タグを差し替える（character.yaml の outfit の代わり）")
