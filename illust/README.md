@@ -186,6 +186,30 @@ python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot
    ```
    コマンドの `--style` / `--style-strength` / `--cfg` が優先されます。画風なしで描くときは `--no-style`。
 
+## 5c. 2 人を 1 枚に描く(duo)
+
+```bash
+python -m illustgen duo -a characters/meto -b characters/beni -s "standing, smile, cowboy shot, white background" -n 8
+```
+左に `-a`、右に `-b` のキャラクターを描きます。中では次の 3 段階を 1 回で行います。
+
+1. **構図**: キャラ LoRA を使わず、左半分に A、右半分に B の外見タグを効かせて、2 人が並んだ絵を描く
+2. **左の人**: 左半分だけを A の LoRA で描き直す
+3. **右の人**: 右半分だけを B の LoRA で描き直す
+
+LoRA を左右で別々に効かせるので、2 人の特徴が混ざりにくくなります。
+
+| オプション | 内容 |
+|---|---|
+| `--scene-a` / `--scene-b` | 左 / 右の人だけのタグ(ポーズ・表情など) |
+| `--outfit-a` / `--outfit-b` / `--no-outfit` | 服装の差し替え |
+| `--lora-a` / `--lora-b` | LoRA の差し替え(例: `--lora-a meto_oc:0.7`) |
+| `--refine 0.55` | 描き直しの強さ。上げるとキャラに似るが、構図や 2 人の境目が崩れやすい |
+| `--style` など | 画風・CFG は、省略時は `-a` の character.yaml の設定を使う |
+
+既定のサイズは横長の 1216×832 です。結果は `outputs/duo/<A>_<B>/` に保存されます。
+2 人が絡む構図(抱き合う・重なるなど)は境目で崩れやすいので、並んで立つ・座る構図が向いています。
+
 ## 6. 画像の一部だけ直す(インペイント)
 
 ComfyUI の画面で使うワークフローを用意しています(illustgen の安全チェックは通らないので、

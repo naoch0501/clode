@@ -78,7 +78,10 @@ class ComfyUIProvider:
         if refs:
             values["reference_image"] = self.upload(refs[0])
         wf = _fill(copy.deepcopy(workflow), values)
+        return self.run(wf)
 
+    def run(self, wf: dict) -> list[bytes]:
+        """API 形式のワークフローをそのまま実行して、出力画像を返す。"""
         r = self.session.post(f"{self.url}/prompt", json={"prompt": wf, "client_id": self.client_id}, timeout=60)
         if r.status_code != 200:
             raise RuntimeError(f"ComfyUI がワークフローを拒否しました: {r.status_code} {r.text[:1000]}")

@@ -1,4 +1,5 @@
 import io
+import re
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -379,3 +380,64 @@ def test_character_default_style_and_cfg(tmp_path):
         assert "lora_1" not in wf
     finally:
         server.shutdown()
+
+
+# --- duo（2 人） ----------------------------------------------------------------
+def _duo_env(tmp_path):
+    server = HTTPServer(("127.0.0.1", 0), FakeComfy)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    cfg = __import__("yaml").safe_load((ROOT / "config.example.yaml").read_text())
+    cfg["comfyui"]["url"] = f"http://127.0.0.1:{server.server_port}"
+    cfg["output_dir"] = str(tmp_path / "out")
+    cfg["audit_log"] = str(tmp_path / "out/audit.jsonl")
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(json.dumps(cfg))
+    return server, cfg_path
+
+
+def test_duo_builds_regional_and_per_character_lora(tmp_path):
+    server, cfg_path = _duo_env(tmp_path)
+    style = write_style(tmp_path / "styles/pastel")
+    a = write_char(tmp_path / "chars/meto", name="meto", trigger="meto_oc", appearance="1girl, solo, silver hair",
+                   lora=[{"name": "meto_oc.safetensors", "strength": 0.7}], reference_images=[],
+                   style=str(style), style_strength=0.4)
+    b = write_char(tmp_path / "chars/beni", name="beni", trigger="beni_oc", appearance="1girl, green hair",
+                   lora=[{"name": "beni_oc-000008.safetensors", "strength": 0.8}], reference_images=[])
+    try:
+        main(["--config", str(cfg_path), "duo", "-a", str(a), "-b", str(b), "-s", "standing, smile",
+              "--scene-a", "peace sign", "--seed", "10", "--refine", "0.5"])
+    finally:
+        server.shutdown()
+    wf = FakeComfy.received["prompt"]
+    for nid, node in wf.items():
+        for v in node["inputs"].values():
+            if isinstance(v, list):
+                assert v[0] in wf, (nid, v)
+    by_type = {}
+    for node in wf.values():
+        by_type.setdefault(node["class_type"], []).append(node)
+    loras = sorted(n["inputs"]["lora_name"] for n in by_type["LoraLoader"])
+    assert loras == ["beni_oc-000008.safetensors", "meto_oc.safetensors", "my_style.safetensors"]
+    areas = sorted(n["inputs"]["x"] for n in by_type["ConditioningSetArea"])
+    assert areas == [0, 608]
+    seeds = sorted(n["inputs"]["seed"] for n in by_type["KSampler"])
+    assert seeds == [10, 11, 12]
+    assert sorted(n["inputs"]["denoise"] for n in by_type["KSampler"]) == [0.5, 0.5, 1.0]
+    texts = [n["inputs"]["text"] for n in by_type["CLIPTextEncode"]]
+    assert any("2girls" in t for t in texts)
+    assert any("meto_oc" in t and "silver hair" in t and "peace sign" in t for t in texts)
+    assert any("beni_oc" in t and "green hair" in t for t in texts)
+    assert not any(re.search(r"(?<![a-z])solo(?! focus)", t) for t in texts)
+    assert all("meto_oc" not in t and "beni_oc" not in t for t in texts if "2girls" in t)
+    out = list((tmp_path / "out/duo/meto_beni").rglob("*.png"))
+    assert len(out) == 1 and (out[0].parent / "prompt.txt").exists()
+
+
+def test_duo_checks_both_characters(tmp_path):
+    a = write_char(tmp_path / "chars/a")
+    b = write_char(tmp_path / "chars/b", age=16)
+    with pytest.raises(SystemExit, match="age"):
+        main(["--config", str(ROOT / "config.example.yaml"), "duo", "-a", str(a), "-b", str(b), "-s", "smile"])
+    with pytest.raises(SystemExit, match="安全チェック"):
+        main(["--config", str(ROOT / "config.example.yaml"), "duo", "-a", str(a), "-b", str(a), "-s", "smile",
+              "--scene-b", "loli"])

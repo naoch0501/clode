@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from . import audit, lora, safety
+from . import audit, duo, lora, safety
 from .character import Character, ConfigFileError
 from .providers import PROVIDERS
 
@@ -196,6 +196,130 @@ python -m illustgen {" ".join(shlex.quote(a) for a in sys.argv[1:])}
     (out_dir / "prompt.txt").write_text(note, encoding="utf-8")
 
 
+def parse_lora_specs(specs: list[str]) -> list[dict]:
+    out = []
+    for spec in specs:
+        name, _, strength = spec.partition(":")
+        if not name.endswith(".safetensors"):
+            name += ".safetensors"
+        out.append({"name": name, "strength": float(strength or 0.8)})
+    return out
+
+
+def cmd_duo(args, cfg) -> None:
+    """2 人を 1 枚に描く。構図 → 左の人（A の LoRA）→ 右の人（B の LoRA）の順に描く。"""
+    chars = []
+    for spec, outfit, extra, lora_spec in ((args.char_a, args.outfit_a, args.scene_a, args.lora_a),
+                                           (args.char_b, args.outfit_b, args.scene_b, args.lora_b)):
+        c = Character.load(spec)
+        safety.check_character(c)
+        if args.no_outfit:
+            c.outfit = ""
+        elif outfit is not None:
+            safety.check_prompt(outfit, "outfit")
+            c.outfit = outfit
+        safety.check_prompt(extra or "", "scene")
+        if lora_spec:
+            c.lora = parse_lora_specs(lora_spec)
+        chars.append((spec, c, extra or ""))
+    safety.check_prompt(args.scene, "scene")
+    (spec_a, a, extra_a), (spec_b, b, extra_b) = chars
+
+    d = {**cfg["defaults"], "width": 1216, "height": 832}
+    if a.cfg is not None:
+        d["cfg"] = a.cfg
+    for key in ("width", "height", "steps", "cfg", "checkpoint"):
+        if getattr(args, key) is not None:
+            d[key] = getattr(args, key)
+    rating = cfg.get("ratings", {}).get(args.rating, {})
+
+    style_loras, style_trig = [], ""
+    style_spec = None if args.no_style else (args.style or a.style or None)
+    if style_spec:
+        sd = resolve_style_dir(style_spec)
+        style = lora.Style.load(sd)
+        lora.check_style(style)
+        style_trig = style.trigger or lora.default_style_trigger(sd)
+        if args.style_strength is not None:
+            strength = args.style_strength
+        elif a.style_strength is not None:
+            strength = a.style_strength
+        else:
+            strength = style.strength
+        style_loras = [{"name": f"{style_trig}.safetensors", "strength": strength}]
+
+    def tags(c: Character) -> str:
+        return drop_solo(join(c.appearance, c.outfit))
+
+    def own_trigger(c: Character) -> str:
+        return c.trigger if c.lora and c.trigger else ""
+
+    head = join(d["quality_positive"], rating.get("positive", ""), safety.FORCED_POSITIVE, style_trig)
+    base_prompt = join(head, "(2girls:1.3), side by side", args.scene)
+    region_a = join("1girl", tags(a), extra_a)
+    region_b = join("1girl", tags(b), extra_b)
+    refine_a = join(head, own_trigger(a), "1girl", tags(a), args.scene, extra_a)
+    refine_b = join(head, own_trigger(b), "1girl", tags(b), args.scene, extra_b)
+    negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), args.negative or "")
+
+    pair = f"{Path(spec_a).name}_{Path(spec_b).name}"
+    out_dir = ROOT / cfg.get("output_dir", "outputs") / "duo" / pair / run_folder_name(args.name, args.scene, args.rating)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    log_path = ROOT / cfg.get("audit_log", "outputs/audit.jsonl")
+    provider = make_provider(cfg)
+
+    seed = args.seed if args.seed is not None else random.randint(0, 2**32 - 4)
+    for i in range(args.count):
+        s = seed + i * 3  # 構図・左・右で seed を 1 ずつ使うので 3 つずつずらす
+        wf = duo.build(d, s, base_prompt, region_a, region_b, refine_a, refine_b, negative,
+                       style_loras, a.lora, b.lora, denoise=args.refine)
+        print(f"[{i + 1}/{args.count}] seed={s} を生成中（構図 → 左: {a.name} → 右: {b.name}）...", flush=True)
+        images = provider.run(wf)
+        saved = []
+        for j, data in enumerate(images):
+            path = out_dir / f"{s}_{j}.png"
+            path.write_bytes(data)
+            saved.append(path)
+            print(f"  保存: {path}")
+        audit.write(log_path, {
+            "mode": "duo", "characters": [a.name, b.name], "ages": [a.age, b.age], "rating": args.rating,
+            "positive": {"base": base_prompt, "left": refine_a, "right": refine_b}, "negative": negative,
+            "seed": s, "checkpoint": d["checkpoint"], "loras": {"style": style_loras, "left": a.lora, "right": b.lora},
+            "outputs": [str(p) for p in saved],
+        })
+    note = f"""2 人（duo）
+左: {a.name} / LoRA: {", ".join(f"{e['name']} ({e.get('strength', 0.8)})" for e in a.lora) or "なし"}
+右: {b.name} / LoRA: {", ".join(f"{e['name']} ({e.get('strength', 0.8)})" for e in b.lora) or "なし"}
+画風: {", ".join(f"{e['name']} ({e['strength']})" for e in style_loras) or "なし"}
+レーティング: {args.rating}
+seed: {seed}（1 枚ごとに 3 ずつ増える）
+サイズ: {d["width"]}x{d["height"]} / steps {d["steps"]} / cfg {d["cfg"]} / 描き直しの強さ {args.refine}
+
+--- 構図: 全体 ---
+{base_prompt}
+
+--- 構図: 左の人 ---
+{region_a}
+
+--- 構図: 右の人 ---
+{region_b}
+
+--- 描き直し: 左の人 ---
+{refine_a}
+
+--- 描き直し: 右の人 ---
+{refine_b}
+
+--- Negative ---
+{negative}
+
+--- 同じ設定でもう一度 ---
+python -m illustgen {" ".join(shlex.quote(x) for x in sys.argv[1:])}
+"""
+    (out_dir / "prompt.txt").write_text(note, encoding="utf-8")
+    print(f"\nフォルダ: {out_dir}")
+
+
 def resolve_style_dir(spec: str) -> Path:
     p = Path(spec)
     if not p.exists() and (ROOT / "styles" / spec).exists():
@@ -334,6 +458,34 @@ def main(argv=None) -> None:
     p.add_argument("--cfg", type=float)
     p.add_argument("--checkpoint")
     p.set_defaults(func=cmd_generate)
+
+    p = sub.add_parser("duo", help="2 人を 1 枚に描く（左: -a、右: -b）")
+    p.add_argument("-a", "--char-a", required=True, help="左の人: characters/<名前>")
+    p.add_argument("-b", "--char-b", required=True, help="右の人: characters/<名前>")
+    p.add_argument("-s", "--scene", required=True, help="2 人に共通のシーン・構図のタグ")
+    p.add_argument("--scene-a", help="左の人だけのタグ（ポーズ・表情など）")
+    p.add_argument("--scene-b", help="右の人だけのタグ")
+    p.add_argument("--outfit-a", help="左の人の服装（character.yaml の outfit の代わり）")
+    p.add_argument("--outfit-b", help="右の人の服装")
+    p.add_argument("--no-outfit", action="store_true", help="2 人とも服装タグを入れない")
+    p.add_argument("--lora-a", action="append", metavar="名前[:強さ]", help="左の人の LoRA（character.yaml の代わり）")
+    p.add_argument("--lora-b", action="append", metavar="名前[:強さ]", help="右の人の LoRA")
+    p.add_argument("--refine", type=float, default=0.55,
+                   help="それぞれの LoRA で描き直す強さ 0.3-0.8（上げるとキャラに似るが、構図や境目が崩れやすい）")
+    p.add_argument("-r", "--rating", choices=["general", "r18"], default="general")
+    p.add_argument("-n", "--count", type=int, default=1)
+    p.add_argument("--name", help="保存フォルダの名前")
+    p.add_argument("--seed", type=int)
+    p.add_argument("--negative", help="追加のネガティブプロンプト")
+    p.add_argument("--style", help="画風（省略時は -a の character.yaml の style）")
+    p.add_argument("--style-strength", type=float)
+    p.add_argument("--no-style", action="store_true")
+    p.add_argument("--width", type=int, help="既定 1216（横長）")
+    p.add_argument("--height", type=int, help="既定 832")
+    p.add_argument("--steps", type=int)
+    p.add_argument("--cfg", type=float)
+    p.add_argument("--checkpoint")
+    p.set_defaults(func=cmd_duo)
 
     p = sub.add_parser("lora-prep", help="LoRA 学習データを準備する（train/ の画像に自動でタグ付け）")
     g = p.add_mutually_exclusive_group(required=True)
