@@ -96,6 +96,8 @@ def cmd_generate(args, cfg) -> None:
         else:
             strength = style.strength
         char.lora = [*char.lora, {"name": fname, "strength": strength, "trigger": trig}]
+    if args.hairstyle:
+        char.use_hairstyle(args.hairstyle)
     if args.no_outfit:
         char.outfit = ""
     elif args.outfit is not None:
@@ -210,10 +212,13 @@ def parse_lora_specs(specs: list[str]) -> list[dict]:
 def cmd_duo(args, cfg) -> None:
     """2 人を 1 枚に描く。構図 → 左の人（A の LoRA）→ 右の人（B の LoRA）の順に描く。"""
     chars = []
-    for spec, outfit, extra, lora_spec in ((args.char_a, args.outfit_a, args.scene_a, args.lora_a),
-                                           (args.char_b, args.outfit_b, args.scene_b, args.lora_b)):
+    for spec, outfit, extra, lora_spec, hairstyle in (
+            (args.char_a, args.outfit_a, args.scene_a, args.lora_a, args.hairstyle_a),
+            (args.char_b, args.outfit_b, args.scene_b, args.lora_b, args.hairstyle_b)):
         c = Character.load(spec)
         safety.check_character(c)
+        if hairstyle:
+            c.use_hairstyle(hairstyle)
         if args.no_outfit:
             c.outfit = ""
         elif outfit is not None:
@@ -250,7 +255,7 @@ def cmd_duo(args, cfg) -> None:
         style_loras = [{"name": f"{style_trig}.safetensors", "strength": strength}]
 
     def tags(c: Character) -> str:
-        return drop_solo(join(c.appearance, c.outfit))
+        return drop_solo(join(c.hair, c.appearance, c.outfit))
 
     def own_trigger(c: Character) -> str:
         return c.trigger if c.lora and c.trigger else ""
@@ -349,7 +354,7 @@ def cmd_lora_prep(args, cfg) -> None:
     if is_style:
         out = lora.prepare_style(d, lora.Style.load(d), trigger)
     else:
-        out = lora.prepare(d, Character.load(d), trigger)
+        out = lora.prepare(d, Character.load(d), trigger, keep_hairstyle=args.keep_hairstyle)
     n = len(list(out.glob("*.png")))
     print(f"\n完了: {n} 枚 → {out}")
     print("  .txt を開いてタグを確認できます（間違ったタグは消してよい）。")
@@ -449,6 +454,7 @@ def main(argv=None) -> None:
     p.add_argument("--no-style", action="store_true", help="character.yaml の style を使わない（画風なしで描く）")
     p.add_argument("--style-strength", type=float, help="画風 LoRA の強さ（省略時は style.yaml の strength）")
     p.add_argument("--style-file", help="画風 LoRA のファイル名（途中経過と比べるとき。例: mystyle_style-000006）")
+    p.add_argument("--hairstyle", help="character.yaml の hairstyles から髪型を選ぶ（例: --hairstyle ponytail）")
     p.add_argument("--outfit", help="この回だけ服装タグを差し替える（character.yaml の outfit の代わり）")
     p.add_argument("--no-outfit", action="store_true", help="この回は服装タグを入れない")
     p.add_argument("--lora", action="append", metavar="名前[:強さ]",
@@ -470,6 +476,8 @@ def main(argv=None) -> None:
     p.add_argument("--outfit-a", help="左の人の服装（character.yaml の outfit の代わり）")
     p.add_argument("--outfit-b", help="右の人の服装")
     p.add_argument("--no-outfit", action="store_true", help="2 人とも服装タグを入れない")
+    p.add_argument("--hairstyle-a", help="左の人の髪型（character.yaml の hairstyles から）")
+    p.add_argument("--hairstyle-b", help="右の人の髪型")
     p.add_argument("--lora-a", action="append", metavar="名前[:強さ]", help="左の人の LoRA（character.yaml の代わり）")
     p.add_argument("--lora-b", action="append", metavar="名前[:強さ]", help="右の人の LoRA")
     p.add_argument("--refine", type=float, default=0.55,
@@ -493,6 +501,8 @@ def main(argv=None) -> None:
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("-c", "--character", help="キャラクター LoRA: characters/<名前>")
     g.add_argument("--style", help="画風 LoRA: styles/<名前>")
+    p.add_argument("--keep-hairstyle", action="store_true",
+                   help="髪型（長さ・形）のタグを残す。LoRA に髪型を固定させず、あとから髪型を変えられるようにする")
     p.set_defaults(func=cmd_lora_prep)
 
     p = sub.add_parser("lora-train", help="キャラクター / 画風 LoRA を学習する")

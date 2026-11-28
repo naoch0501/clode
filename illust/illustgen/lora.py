@@ -29,6 +29,12 @@ INTRINSIC_PATTERNS = [
     r".* hair$", r".* eyes$", r"^hair .*", r".*bangs$", r"^sidelocks$", r"^ahoge$",
     r".* pupils$", r"^eyelashes$", r"^gradient eyes$",
 ]
+# 髪型（長さ・形）のタグ。--keep-hairstyle のときは消さずに残し、あとから髪型を変えられるようにする
+HAIRSTYLE_PATTERNS = [
+    r"(very )?(short|medium|long|very long|absurdly long) hair", r".*(cut|bob)$", r".*ponytail.*", r".*twintails.*",
+    r".*braid.*", r".*bun.*", r".*drill.*", r"(straight|wavy|curly|messy|layered|flipped|spiked) hair",
+    r".*bangs$", r"^sidelocks$", r"hair (over|between) .*", r"hair (up|down)", r"half updo", r"updo",
+]
 GENERIC_KEEP = {"1girl", "1boy", "solo", "adult woman", "adult man", "mature female", "mature male"}
 
 
@@ -86,11 +92,14 @@ class WDTagger:
         return [n if n in KEEP_UNDERSCORE else n.replace("_", " ") for n, _ in found]
 
 
-def build_caption(trigger: str, tags: list[str], char: Character) -> str:
-    own = {t.strip().lower() for t in (char.appearance or "").split(",") if t.strip()} - GENERIC_KEEP
+def build_caption(trigger: str, tags: list[str], char: Character, keep_hairstyle: bool = False) -> str:
+    own = {t.strip().lower() for t in f"{char.appearance or ''},{char.hair or ''}".split(",") if t.strip()} - GENERIC_KEEP
     kept = []
     for t in tags:
         tl = t.lower()
+        if keep_hairstyle and any(re.fullmatch(p, tl) for p in HAIRSTYLE_PATTERNS):
+            kept.append(t)
+            continue
         if tl in own or any(re.fullmatch(p, tl) for p in INTRINSIC_PATTERNS):
             continue
         kept.append(t)
@@ -179,10 +188,12 @@ def _prepare(base_dir: Path, caption, tagger, hint: str) -> Path:
     return out
 
 
-def prepare(char_dir: Path, char: Character, trigger: str, tagger=None) -> Path:
-    """キャラクター LoRA 用。キャラ固有の特徴タグは外してトリガーワードに覚えさせる。"""
+def prepare(char_dir: Path, char: Character, trigger: str, tagger=None, keep_hairstyle: bool = False) -> Path:
+    """キャラクター LoRA 用。キャラ固有の特徴タグは外してトリガーワードに覚えさせる。
+    keep_hairstyle=True なら髪型（長さ・形）のタグは残し、髪型をあとから変えられるようにする。"""
     safety.check_character(char)
-    return _prepare(char_dir, lambda tags: build_caption(trigger, tags, char), tagger, "15〜30 枚が目安")
+    return _prepare(char_dir, lambda tags: build_caption(trigger, tags, char, keep_hairstyle), tagger,
+                    "15〜30 枚が目安")
 
 
 def prepare_style(style_dir: Path, style: Style, trigger: str, tagger=None) -> Path:

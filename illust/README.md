@@ -157,6 +157,18 @@ python -m illustgen generate -c characters/meto -s "standing, smile, cowboy shot
 似すぎて崩れる・絵が固い → 強さを下げる(`--lora meto_oc:0.6`)か、早いエポックを使う。
 似ない → 強さを上げる、エポックを増やす(`--epochs 14`)、学習画像を増やす。
 
+### 髪型を切り替える
+`character.yaml` に、基本の髪型を `hair:`、切り替え用を `hairstyles:` に書きます(髪の色は `appearance` に残す)。
+```yaml
+hair: "medium hair, wolf cut, bangs"
+hairstyles:
+  ponytail: "long hair, high ponytail, bangs"
+  bob: "short hair, bob cut, bangs"
+```
+生成時に `--hairstyle ponytail` で選びます(duo では `--hairstyle-a` / `--hairstyle-b`)。
+キャラ LoRA は、作るときに髪型のタグも消すと髪型まで覚えてしまい、あとから変えにくくなります。
+髪型を変えたいキャラは **`lora-prep --keep-hairstyle`** で、髪型(長さ・形)のタグを残して学習してください。
+
 ## 5b. 画風 LoRA を作る
 
 キャラクターとは別に「絵柄」だけを覚えさせる LoRA です。キャラ LoRA と重ねて使えます。

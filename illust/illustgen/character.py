@@ -53,6 +53,8 @@ class Character:
     style_strength: float | None = None  # その画風の強さ（style.yaml より優先）
     cfg: float | None = None             # このキャラの CFG（config.yaml より優先）
     negative: str = ""                   # このキャラだけに毎回入れるネガティブ
+    hair: str = ""                       # 基本の髪型（appearance とは別に書ける）
+    hairstyles: dict = field(default_factory=dict)  # 切り替え用の髪型 {名前: タグ}
 
     @classmethod
     def load(cls, path: str | Path) -> "Character":
@@ -78,10 +80,18 @@ class Character:
             style_strength=float(data["style_strength"]) if data.get("style_strength") is not None else None,
             cfg=float(data["cfg"]) if data.get("cfg") is not None else None,
             negative=str(data.get("negative") or ""),
+            hair=str(data.get("hair") or ""),
+            hairstyles={str(k): str(v) for k, v in (data.get("hairstyles") or {}).items()},
         )
+
+    def use_hairstyle(self, name: str) -> None:
+        if name not in self.hairstyles:
+            names = ", ".join(self.hairstyles) or "（character.yaml に hairstyles がありません）"
+            raise ConfigFileError(f"髪型 '{name}' がありません。使える髪型: {names}")
+        self.hair = self.hairstyles[name]
 
     def prompt_fragment(self) -> str:
         own = self.trigger and any(not e.get("trigger") for e in self.lora)
         triggers = [self.trigger] if own else []
         triggers += [str(e["trigger"]) for e in self.lora if e.get("trigger")]
-        return ", ".join(p for p in (*triggers, self.appearance, self.outfit) if p)
+        return ", ".join(p for p in (*triggers, self.hair, self.appearance, self.outfit) if p)

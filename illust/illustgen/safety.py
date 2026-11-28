@@ -83,8 +83,10 @@ def check_character(char) -> None:
         raise SafetyError(
             f"キャラクター '{char.name}': age は {MIN_AGE} 以上の数値を指定してください（現在: {char.age}）。"
         )
-    for field in ("name", "description", "appearance", "outfit", "trigger"):
+    for field in ("name", "description", "hair", "appearance", "outfit", "trigger"):
         check_prompt(str(getattr(char, field) or ""), f"キャラクター '{char.name}' の {field}")
+    for name, tags in (getattr(char, "hairstyles", None) or {}).items():
+        check_prompt(tags, f"キャラクター '{char.name}' の髪型 {name}")
 
 
 def check_reference_image(path: Path) -> None:

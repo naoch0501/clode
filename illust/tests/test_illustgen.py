@@ -452,3 +452,35 @@ def test_character_negative(tmp_path):
         server.shutdown()
     neg = FakeComfy.received["prompt"]["7"]["inputs"]["text"]
     assert "red hair, colored tips" in neg and neg.endswith("extra")
+
+
+# --- 髪型の切り替え ---------------------------------------------------------------
+def test_hairstyle_switch(tmp_path):
+    server, cfg_path = _duo_env(tmp_path)
+    char = write_char(tmp_path / "chars/nose", appearance="1girl, purple eyes", hair="medium hair, wolf cut",
+                      hairstyles={"ponytail": "long hair, high ponytail"}, reference_images=[])
+    try:
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile"])
+        assert "wolf cut" in FakeComfy.received["prompt"]["6"]["inputs"]["text"]
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile", "--hairstyle", "ponytail"])
+        text = FakeComfy.received["prompt"]["6"]["inputs"]["text"]
+        assert "high ponytail" in text and "wolf cut" not in text
+    finally:
+        server.shutdown()
+    with pytest.raises(SystemExit, match="使える髪型: ponytail"):
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile", "--hairstyle", "bob"])
+
+
+def test_hairstyle_safety(tmp_path):
+    char = write_char(tmp_path / "chars/x", hairstyles={"bad": "twintails, loli"}, reference_images=[])
+    with pytest.raises(SystemExit, match="髪型 bad"):
+        main(["--config", str(ROOT / "config.example.yaml"), "check", "-c", str(char)])
+
+
+def test_keep_hairstyle_caption():
+    char = Character(name="t", age=25, declared_original=True, appearance="1girl, purple eyes",
+                     hair="blue-black hair, medium hair, wolf cut")
+    tags = ["1girl", "blue-black hair", "black hair", "medium hair", "wolf cut", "bangs", "purple eyes", "hoodie"]
+    assert lora.build_caption("nose_oc", tags, char) == "nose_oc, 1girl, hoodie"
+    assert lora.build_caption("nose_oc", tags, char, keep_hairstyle=True) == \
+        "nose_oc, 1girl, medium hair, wolf cut, bangs, hoodie"

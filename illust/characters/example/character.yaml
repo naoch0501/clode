@@ -25,3 +25,10 @@ lora: []
 # cfg: 4.5
 # このキャラだけに毎回入れるネガティブ（省略可）
 # negative: "red hair, colored tips"
+
+# 髪型を切り替えたい場合（省略可）: hair に基本の髪型、hairstyles に切り替え用の髪型を書く
+# 生成時に --hairstyle ponytail のように選ぶ。LoRA を作るときは lora-prep --keep-hairstyle を付ける
+# hair: "medium hair, wolf cut, bangs"
+# hairstyles:
+#   ponytail: "long hair, high ponytail, bangs"
+#   bob: "short hair, bob cut, bangs"
