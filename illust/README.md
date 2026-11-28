@@ -240,6 +240,9 @@ ComfyUI の画面で使うワークフローを用意しています(illustgen �
 (カスタムノード ComfyUI-Inpaint-CropAndStitch が必要。`scripts/03_install_comfyui.sh` を再実行すると入ります)。
 「切り出す」ノードの `context_from_mask_extend_factor`(既定 1.5)を上げると、周りの状況をより多く見て描きます。
 
+画風 LoRA(`--style`)を付けて生成した画像は、**`inpaint_crop_lora_style.json`** で直すと、描き直した部分の絵柄が周りと合います。
+「キャラ LoRA」と「画風 LoRA」ノードの強さを、生成したときと同じにしてください。
+
 ## ファイル構成
 
 | パス | 内容 |
@@ -252,6 +255,7 @@ ComfyUI の画面で使うワークフローを用意しています(illustgen �
 | `workflows/sdxl_ipadapter.json` | 参考画像あり(IP-Adapter)のワークフロー |
 | `workflows/inpaint.json` / `inpaint_lora.json` | ComfyUI の画面で使うインペイント用(LoRA なし / あり) |
 | `workflows/inpaint_crop.json` / `inpaint_crop_lora.json` | 塗った周りだけ切り出して描き直すインペイント(大きい画像向け) |
+| `workflows/inpaint_crop_lora_style.json` | 上に画風 LoRA も加えた版。画風を付けて生成した画像を直すとき、絵柄を合わせられる |
 | `workflows/sdxl_txt2img.json` | 参考画像なしのワークフロー |
 | `tests/` | `python -m pytest tests` |
 
