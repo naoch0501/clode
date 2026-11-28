@@ -63,6 +63,19 @@ class Character:
             path = path / "character.yaml"
         data = load_yaml(path)
         base = path.parent
+        for key in ("reference_weight", "style_strength", "cfg"):
+            if data.get(key) is not None:
+                try:
+                    float(data[key])
+                except (TypeError, ValueError):
+                    raise ConfigFileError(
+                        f"{path} の {key} は数字にしてください（今の値: {str(data[key])[:60]}）。\n"
+                        "  前の中身が残ったまま貼り付けて、行がつながっていないか確認してください。") from None
+        for entry in data.get("lora") or []:
+            try:
+                float(entry.get("strength", 0.8))
+            except (TypeError, ValueError, AttributeError):
+                raise ConfigFileError(f"{path} の lora の strength は数字にしてください。") from None
         refs = [(base / p).resolve() for p in data.get("reference_images", [])]
         age = data.get("age")
         return cls(

@@ -484,3 +484,12 @@ def test_keep_hairstyle_caption():
     assert lora.build_caption("nose_oc", tags, char) == "nose_oc, 1girl, hoodie"
     assert lora.build_caption("nose_oc", tags, char, keep_hairstyle=True) == \
         "nose_oc, 1girl, medium hair, wolf cut, bangs, hoodie"
+
+
+def test_bad_number_in_character_yaml(tmp_path):
+    d = tmp_path / "chars/h"
+    d.mkdir(parents=True)
+    (d / "character.yaml").write_text('name: h\nsource: original\nage: 26\ncfg: 4.0hair, (long hair:1.1)"\n',
+                                      encoding="utf-8")
+    with pytest.raises(SystemExit, match="cfg は数字"):
+        main(["--config", str(ROOT / "config.example.yaml"), "check", "-c", str(d)])
