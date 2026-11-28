@@ -23,3 +23,5 @@ lora: []
 # style: styles/mystyle
 # style_strength: 0.6
 # cfg: 4.5
+# このキャラだけに毎回入れるネガティブ（省略可）
+# negative: "red hair, colored tips"

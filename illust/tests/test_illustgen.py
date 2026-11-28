@@ -441,3 +441,14 @@ def test_duo_checks_both_characters(tmp_path):
     with pytest.raises(SystemExit, match="安全チェック"):
         main(["--config", str(ROOT / "config.example.yaml"), "duo", "-a", str(a), "-b", str(a), "-s", "smile",
               "--scene-b", "loli"])
+
+
+def test_character_negative(tmp_path):
+    server, cfg_path = _duo_env(tmp_path)
+    char = write_char(tmp_path / "chars/meto", negative="red hair, colored tips", reference_images=[])
+    try:
+        main(["--config", str(cfg_path), "generate", "-c", str(char), "-s", "smile", "--negative", "extra"])
+    finally:
+        server.shutdown()
+    neg = FakeComfy.received["prompt"]["7"]["inputs"]["text"]
+    assert "red hair, colored tips" in neg and neg.endswith("extra")

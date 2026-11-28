@@ -52,6 +52,7 @@ class Character:
     style: str = ""                    # 既定で重ねる画風（例: styles/mystyle）
     style_strength: float | None = None  # その画風の強さ（style.yaml より優先）
     cfg: float | None = None             # このキャラの CFG（config.yaml より優先）
+    negative: str = ""                   # このキャラだけに毎回入れるネガティブ
 
     @classmethod
     def load(cls, path: str | Path) -> "Character":
@@ -76,6 +77,7 @@ class Character:
             style=str(data.get("style") or ""),
             style_strength=float(data["style_strength"]) if data.get("style_strength") is not None else None,
             cfg=float(data["cfg"]) if data.get("cfg") is not None else None,
+            negative=str(data.get("negative") or ""),
         )
 
     def prompt_fragment(self) -> str:

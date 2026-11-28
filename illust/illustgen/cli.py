@@ -105,7 +105,8 @@ def cmd_generate(args, cfg) -> None:
                     char.prompt_fragment(), args.scene)
     if has_other_people(args.scene):
         positive = drop_solo(positive)
-    negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), args.negative or "")
+    negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), char.negative,
+                    args.negative or "")
 
     refs = char.reference_images[:1] if not args.no_reference else []
     wf_key = "with_reference" if refs else "without_reference"
@@ -260,7 +261,8 @@ def cmd_duo(args, cfg) -> None:
     region_b = join("1girl", tags(b), extra_b)
     refine_a = join(head, own_trigger(a), "1girl", tags(a), args.scene, extra_a)
     refine_b = join(head, own_trigger(b), "1girl", tags(b), args.scene, extra_b)
-    negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), args.negative or "")
+    negative = join(safety.FORCED_NEGATIVE, d["negative"], rating.get("negative", ""), char.negative,
+                    args.negative or "")
 
     pair = f"{Path(spec_a).name}_{Path(spec_b).name}"
     out_dir = ROOT / cfg.get("output_dir", "outputs") / "duo" / pair / run_folder_name(args.name, args.scene, args.rating)
