@@ -84,8 +84,13 @@ python -m illustgen generate -c characters/mychar -r r18 -s "lying on bed, bedro
 python -m illustgen generate -c characters/mychar -s "sitting, cafe" --weight 0.5 --seed 1234
 ```
 
+生成するたびに `outputs/<キャラ名>/<日時>_<名前>/` というフォルダができ、画像(`<seed>_0.png`)と
+`prompt.txt`(シーン、seed、LoRA、Positive / Negative の全文、同じ設定で出し直すコマンド)が入ります。
+フォルダ名は `--name` で決められます(省略時はシーンの先頭のタグから作ります。R18 は先頭に `r18_` が付きます)。
+
 | オプション | 内容 |
 |---|---|
+| `--name` | 保存フォルダの名前(例: `--name タオル見せつけ`) |
 | `-s` | シーン・ポーズ・構図のタグ |
 | `-r general / r18` | レーティング。既定は general |
 | `-n` | 枚数(seed を 1 ずつ増やす) |

@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import os
 import random
+import re
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -99,7 +101,8 @@ def cmd_generate(args, cfg) -> None:
     wf_key = "with_reference" if refs else "without_reference"
     workflow = ROOT / cfg["workflows"][wf_key]
 
-    out_dir = ROOT / cfg.get("output_dir", "outputs") / Path(args.character).name
+    char_out = ROOT / cfg.get("output_dir", "outputs") / Path(args.character).name
+    out_dir = char_out / run_folder_name(args.name, args.scene, args.rating)
     out_dir.mkdir(parents=True, exist_ok=True)
     log_path = ROOT / cfg.get("audit_log", "outputs/audit.jsonl")
     provider = make_provider(cfg)
@@ -114,7 +117,7 @@ def cmd_generate(args, cfg) -> None:
         images = provider.generate(workflow, values, refs, char.lora)
         saved = []
         for j, data in enumerate(images):
-            path = out_dir / f"{time.strftime('%Y%m%d-%H%M%S')}_{seed + i}_{j}.png"
+            path = out_dir / f"{seed + i}_{j}.png"
             path.write_bytes(data)
             saved.append(path)
             print(f"  保存: {path}")
@@ -125,6 +128,47 @@ def cmd_generate(args, cfg) -> None:
             "references": [{"file": str(r), "sha256": audit.sha256(r)} for r in refs],
             "outputs": [str(p) for p in saved],
         })
+    write_run_note(out_dir, args, char, positive, negative, d, workflow, seed)
+    print(f"\nフォルダ: {out_dir}")
+
+
+def run_folder_name(name: str | None, scene: str, rating: str) -> str:
+    """生成 1 回ごとのフォルダ名: 日時_名前（--name がなければシーンの先頭のタグから作る）。"""
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    if name:
+        label = name
+    else:
+        tags = [re.sub(r"[()]|:[0-9.]+", "", t).strip() for t in scene.split(",")]
+        label = "_".join(t for t in tags if t)[:40]
+        if rating == "r18":
+            label = f"r18_{label}"
+    label = re.sub(r'[\\/:*?"<>|\s]+', "-", label).strip("-.") or "run"
+    return f"{stamp}_{label}"
+
+
+def write_run_note(out_dir: Path, args, char, positive: str, negative: str, d: dict, workflow: Path,
+                   seed: int) -> None:
+    loras = ", ".join(f"{e['name']} ({e.get('strength', 0.8)})" for e in char.lora) or "なし"
+    seeds = f"{seed}" if args.count == 1 else f"{seed} 〜 {seed + args.count - 1}"
+    note = f"""キャラクター: {char.name}
+レーティング: {args.rating}
+シーン (-s): {args.scene}
+seed: {seeds}
+モデル: {d["checkpoint"]}
+LoRA: {loras}
+ワークフロー: {workflow.name}
+サイズ: {d["width"]}x{d["height"]} / steps {d["steps"]} / cfg {d["cfg"]}
+
+--- Positive ---
+{positive}
+
+--- Negative ---
+{negative}
+
+--- 同じ設定で 1 枚出し直すには（seed を変える） ---
+python -m illustgen {" ".join(shlex.quote(a) for a in sys.argv[1:])}
+"""
+    (out_dir / "prompt.txt").write_text(note, encoding="utf-8")
 
 
 def resolve_style_dir(spec: str) -> Path:
@@ -243,6 +287,7 @@ def main(argv=None) -> None:
     p.add_argument("-s", "--scene", required=True, help="シーン・ポーズ・構図のタグ")
     p.add_argument("-r", "--rating", choices=["general", "r18"], default="general")
     p.add_argument("-n", "--count", type=int, default=1)
+    p.add_argument("--name", help="保存フォルダの名前（省略時はシーンの先頭のタグから作る）")
     p.add_argument("--seed", type=int)
     p.add_argument("--negative", help="追加のネガティブプロンプト")
     p.add_argument("--weight", type=float, help="参考画像の効き具合 (0.0-1.0)")

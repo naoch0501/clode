@@ -141,7 +141,12 @@ def test_generate_end_to_end(tmp_path):
     assert wf["11"]["inputs"]["image"] == "ref.png"
     assert wf["12"]["inputs"]["start_at"] == 0.3 and wf["12"]["inputs"]["end_at"] == 0.8
     assert "lora_0" in wf
-    assert len(list((tmp_path / "out/test").glob("*.png"))) == 1
+    pngs = list((tmp_path / "out/test").rglob("*.png"))
+    assert len(pngs) == 1 and pngs[0].name == "42_0.png"
+    run_dir = pngs[0].parent
+    assert run_dir.name.endswith("_r18_sitting_bedroom")
+    note = (run_dir / "prompt.txt").read_text(encoding="utf-8")
+    assert "seed: 42" in note and "--- Positive ---" in note and "nsfw" in note
     log = json.loads((tmp_path / "out/audit.jsonl").read_text().splitlines()[0])
     assert log["seed"] == 42 and log["references"][0]["sha256"]
 
@@ -330,3 +335,10 @@ def test_broken_yaml_gives_readable_error(tmp_path):
 def test_missing_character_folder(tmp_path):
     with pytest.raises(SystemExit, match="ファイルが見つかりません"):
         main(["--config", str(ROOT / "config.example.yaml"), "check", "-c", str(tmp_path / "nope")])
+
+
+def test_run_folder_name():
+    from illustgen.cli import run_folder_name
+    assert run_folder_name("テスト/1", "x", "general").endswith("_テスト-1")
+    assert run_folder_name(None, "(from above:1.3), pov, 1boy, fellatio", "r18").endswith("_r18_from above_pov_1boy_fellatio".replace(" ", "-"))
+    assert run_folder_name(None, "", "general").endswith("_run")
