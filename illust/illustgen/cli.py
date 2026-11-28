@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 
 from . import audit, lora, safety
-from .character import Character
+from .character import Character, ConfigFileError
 from .providers import PROVIDERS
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -288,6 +288,10 @@ def main(argv=None) -> None:
         args.func(args, cfg)
     except safety.SafetyError as e:
         sys.exit(f"[安全チェックで停止] {e}")
+    except ConfigFileError as e:
+        sys.exit(f"[設定ファイルの誤り] {e}")
+    except FileNotFoundError as e:
+        sys.exit(f"[ファイルが見つかりません] {e.filename}\n  -c のフォルダ名が合っているか確認してください（例: characters/meto）。")
 
 
 if __name__ == "__main__":

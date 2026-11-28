@@ -18,7 +18,7 @@ import yaml
 from PIL import Image
 
 from . import safety
-from .character import Character
+from .character import Character, load_yaml
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 TAGGER_REPO = "SmilingWolf/wd-vit-tagger-v3"
@@ -112,7 +112,7 @@ class Style:
             path = path / "style.yaml"
         if not path.exists():
             raise safety.SafetyError(f"{path} がありません。styles/example/style.yaml をコピーして作ってください。")
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        data = load_yaml(path)
         return cls(
             name=str(data.get("name", path.parent.name)),
             declared_source=str(data.get("source", "")),

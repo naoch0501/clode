@@ -313,3 +313,20 @@ def test_lora_train_style_dry_run(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "40 枚 × 5 回 × 10 エポック = 2000 ステップ" in out
     assert "--output_name my_style" in out
+
+
+def test_broken_yaml_gives_readable_error(tmp_path):
+    d = tmp_path / "chars/broken"
+    d.mkdir(parents=True)
+    (d / "character.yaml").write_text(
+        'name: b\nsource: original\nage: 25\nappearance: "1girl, smile"outfit: "bikini"\n', encoding="utf-8")
+    with pytest.raises(SystemExit, match="設定ファイルの誤り"):
+        main(["--config", str(ROOT / "config.example.yaml"), "check", "-c", str(d)])
+    (d / "character.yaml").write_text('name: b\nreference_images:[]\nage: 25\n', encoding="utf-8")
+    with pytest.raises(SystemExit, match="2 行目"):
+        main(["--config", str(ROOT / "config.example.yaml"), "check", "-c", str(d)])
+
+
+def test_missing_character_folder(tmp_path):
+    with pytest.raises(SystemExit, match="ファイルが見つかりません"):
+        main(["--config", str(ROOT / "config.example.yaml"), "check", "-c", str(tmp_path / "nope")])
